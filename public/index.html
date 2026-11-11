@@ -234,6 +234,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .cat-head h3{font-family:var(--font-hand);font-size:1.08rem;font-weight:600;color:var(--accent);line-height:1.2}
 .cat-head .count{color:var(--muted);font-size:.85rem;margin-inline-start:auto}
 .items{list-style:none}
+.items.flat{margin-top:10px;border-top:1.5px solid var(--line)}
 .item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1.5px solid var(--line);transition:background .25s,transform .25s var(--ease);animation:itemIn .35s var(--ease)}
 .item:hover{background:rgba(255,255,255,.4);transform:translateX(-3px)}
 @keyframes itemIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
@@ -460,8 +461,8 @@ const CATS = {
   pantry:{name:'מזווה ויבשים',color:'#d9bf96',kw:['אורז','פסטה','ספגטי','קמח','סוכר','מלח','שמן','חומץ','קפה','תה','קטשופ','מיונז','חומוס','טחינה','שימורי','רסק','קוסקוס','פתיתים','עדשים','שעועית','גרגירי','דבש','ריבה','ממרח','נוטלה','שקדים','אגוזי','פפריקה','כמון','תבלין','פירורי','שיבולת','קורנפלקס','דגני','רוטב','זיתים','מרק','אבקת','שמרים','וניל','סויה']},
   frozen:{name:'קפואים',color:'#a6c8e6',kw:['קפוא','גלידה','ארטיק','אפונה','שעועית ירוקה','בצק עלים','פיצה','מלאווח','ג\'חנון','קרטיב','צ\'יפס']},
   drinks:{name:'משקאות',color:'#94bde0',kw:['מים','סודה','קולה','ספרייט','מיץ','בירה','יין','פטל','משקה','אנרגיה','נביעות','זירו','תפוזינה','לימונדה','וודקה','ערק']},
-  snacks:{name:'חטיפים ומתוקים',color:'#eba7bb',kw:['במבה','ביסלי','שוקולד','חטיף','דוריטוס','צ\'יטוס','תפוצ\'יפס','סוכריות','מסטיק','ופל','פופקורן','גרעינים','קליק','כיף כף','פסק זמן','חטיפי']},
-  clean:{name:'ניקיון ובית',color:'#93cfc3',kw:['אקונומיקה','סבון כלים','נוזל','מרכך','אבקת כביסה','ג\'ל כביסה','נייר טואלט','מגבות נייר','שקיות','ספוג','מטליות','סנו','אל סבון','נייר אפייה','נייר כסף','ניילון','טבליות','מנקה','שואב','סקוץ\'','מגבונים','פח','נרות']},
+  snacks:{name:'חטיפים ומתוקים',color:'#eba7bb',kw:['במבה','ביסלי','שוקולד','חטיף','דוריטוס','צ\'יטוס','תפוצ\'יפס','סוכרי','מסטיק','ופל','פופקורן','גרעינים','קליק','כיף כף','פסק זמן','חטיפי']},
+  clean:{name:'ניקיון ובית',color:'#93cfc3',kw:['אקונומיקה','סבון כלים','שקית','נוזל','מרכך','אבקת כביסה','ג\'ל כביסה','נייר טואלט','מגבות נייר','שקיות','ספוג','מטליות','סנו','אל סבון','נייר אפייה','נייר כסף','ניילון','טבליות','מנקה','שואב','סקוץ\'','מגבונים','פח','נרות']},
   care:{name:'טיפוח והיגיינה',color:'#c4b0e0',kw:['שמפו','מרכך שיער','סבון','משחת שיניים','מברשת','דאודורנט','קרם','סכין גילוח','תחבושות','טמפונים','צמר גפן','מקלוני','פלסטר','אקמול','נורופן','ויטמין','קונדישנר','ג\'ל רחצה','תער']},
   baby:{name:'תינוקות',color:'#f2cf86',kw:['חיתולים','האגיס','פמפרס','מטרנה','סימילאק','מוצץ','מחית','דייסה','מגבונים לחים']},
   other:{name:'שונות',color:'#cfc6ad',kw:[]}
@@ -485,6 +486,8 @@ const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
   set(k,v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(e){} }
 };
+const APP_URL = 'https://grocery-list.nimrodyaroker.workers.dev';
+const API = location.hostname.endsWith('workers.dev') || location.hostname === 'localhost' ? '' : APP_URL; // מ-GitHub Pages פונים לשרת ב-Cloudflare
 let TOKEN = store.get('gl_token');   // מפתח ההתחברות של המשתמש במכשיר הזה
 let OPEN = store.get('gl_open');     // הרשימה שפתוחה כרגע
 let HOME = null;                     // המשתמש והרשימות שלו
@@ -495,7 +498,7 @@ async function api(path, body){
   if(TOKEN) opt.headers.authorization = 'Bearer ' + TOKEN;
   if(body){ opt.headers['content-type'] = 'application/json'; opt.body = JSON.stringify(body); }
   let r;
-  try{ r = await fetch(path, opt); }catch(e){ throw new Error('אין חיבור לאינטרנט. נסה שוב'); }
+  try{ r = await fetch(API + path, opt); }catch(e){ throw new Error('אין חיבור לאינטרנט. נסה שוב'); }
   let data = {}; try{ data = await r.json(); }catch(e){}
   if(r.status === 401 && TOKEN){ setToken(null); route(); }
   if(!r.ok) throw Object.assign(new Error(data.error || 'משהו השתבש. נסה שוב'), {status: r.status});
@@ -511,15 +514,38 @@ function userOf(id){
 const listName = g => g && g.name ? g.name : 'רשימת הקניות';
 
 /* זיהוי מחלקה לפי מילות מפתח (או לפי מה שנקנה בעבר ברשימה) */
-function categorize(name){
-  const key = name.toLowerCase();
-  const h = LIST && LIST.history.find(x => x.name === name);
-  if(h) return h.cat;
-  let best = 'other', bestLen = 0;
-  for(const c of CAT_ORDER) for(const k of CATS[c].kw)
-    if(key.includes(k) && k.length > bestLen){ best = c; bestLen = k.length; }
+/* מבינים גם רבים ונקבה: "מלפפונים", "חסות", "עוגות" → מורידים סיומות לפני ההשוואה */
+const SUFFIXES = ['יות','ות','ים','יה','ה','ת'];
+const FINALS = {'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
+const plain = s => s.replace(/[ךםןףץ]/g, c => FINALS[c]).replace(/['"״׳]/g,'');   // אותיות סופיות כרגילות: "מלפפון" = "מלפפונ"
+function stem(w){
+  for(const s of SUFFIXES) if(w.endsWith(s) && w.length - s.length >= 2) return w.slice(0, -s.length);
+  return w;
+}
+function matchKw(raw, words, kw){
+  // השוואה לפי מילה שלמה מתחילתה. מחזיר 2 להתאמה מדויקת, 1 להתאמה בלי סיומות, 0 אם אין
+  const kr = kw.split(' '), ks = kr.map(stem);
+  let best = 0;
+  for(let i = 0; i + kr.length <= raw.length; i++){
+    if(kr.every((k, j) => raw[i+j].startsWith(k))) return 2;               // "מלפפונים" מתחיל ב"מלפפונ"
+    if(kr.every((_, j) => { const a = words[i+j], k = ks[j]; return k.length >= 3 ? a.startsWith(k) : a === k; })) best = 1;  // "חסות" = "חסה"
+  }
   return best;
 }
+function categorize(name){
+  const key = plain(name.toLowerCase());
+  const h = LIST && LIST.history.find(x => x.name === name);
+  if(h) return h.cat;
+  const raw = key.split(/\s+/), words = raw.map(stem);
+  let best = 'other', bestScore = 0, bestLen = 0;
+  for(const c of CAT_ORDER) for(const k of CATS[c].kw){
+    const s = matchKw(raw, words, plain(k));
+    if(s && (s > bestScore || (s === bestScore && k.length > bestLen))){ best = c; bestScore = s; bestLen = k.length; }
+  }
+  return best;
+}
+/* מיון לפי סדר המחלקות בסופר (בלי להציג את שמות המחלקות) */
+const catRank = x => CAT_ORDER.indexOf(x.cat && x.cat !== 'other' ? x.cat : categorize(x.name));
 /* פירוק טקסט חופשי: "3 עגבניות", "חלב x2", "ביצים 2" */
 function parseEntry(raw){
   let s = norm(raw), qty = 1, m;
@@ -582,6 +608,7 @@ onSubmit('form-user', async () => {
 /* אווטר: תמונה אם יש, אחרת האות הראשונה על הצבע */
 function avatarHTML(u, extra=''){
   const title = `title="${esc(u.name)}"`;
+  if(u.photo && u.photo.startsWith('/')) u = {...u, photo: API + u.photo};
   return u.photo
     ? `<span class="avatar ${extra}" ${title} style="background:url('${u.photo}') center/cover;background-color:${u.color}"></span>`
     : `<span class="avatar ${extra}" ${title} style="background:${u.color}">${esc(initials(u.name))}</span>`;
@@ -710,19 +737,10 @@ function renderList(){
       <h3 style="color:var(--text);margin-bottom:6px">הרשימה ריקה</h3><p>כתוב למעלה מה צריך — המוצרים יסתדרו לבד לפי מחלקות.</p></div>`;
     hideFinish(); return;
   }
-  const seen = new Set([...body.querySelectorAll('.cat.seen')].map(el => el.dataset.cat));
-  const groups = {};
-  items.forEach(x => (groups[x.cat] ||= []).push(x));
+  // רשימה אחת פשוטה, בלי חלוקה למחלקות
   body.innerHTML = `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
-      <span>בסופר? לחצו <b>"לא נמצא"</b> על כל מוצר שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" — מה שסומן יישאר ברשימה, וכל השאר יימחק.</span></div>`
-    + CAT_ORDER.filter(c=>groups[c]).map(c => `
-    <section class="cat ${seen.has(c)?'seen':''}" data-cat="${c}" aria-label="${CATS[c].name}">
-      <div class="cat-head"><span class="cat-dot" style="background:${CATS[c].color}"><svg class="i"><use href="#c-${c}"/></svg></span>
-        <h3>${CATS[c].name}</h3><span class="count">${groups[c].length}</span></div>
-      <ul class="items">${groups[c].map(itemHTML).join('')}</ul>
-    </section>`).join('');
-  const io = new IntersectionObserver(es => es.forEach(en => { if(en.isIntersecting){ en.target.classList.add('seen'); io.unobserve(en.target); } }), {threshold:.08});
-  body.querySelectorAll('.cat:not(.seen)').forEach(el => io.observe(el));
+      <span>בסופר? לחצו <b>"לא נמצא"</b> על כל מוצר שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" — מה שסומן יישאר ברשימה, וכל השאר יימחק.</span></div>
+    <ul class="items flat">${items.slice().sort((a,b) => catRank(a) - catRank(b)).map(itemHTML).join('')}</ul>`;
 
   const bought = items.length - miss.length;
   document.getElementById('finish-hint').textContent = miss.length ? `${miss.length} לא נמצאו — יישארו ברשימה` : 'סמנו "לא נמצא" על מה שלא היה בסופר';
@@ -838,7 +856,7 @@ document.getElementById('btn-invite').onclick = () => {
     <div class="members" style="margin-top:20px">${g.members.map(u => `<div class="member">${avatarHTML(u)}${esc(u.name)}${u.id===meId()?'<small>זה אתה</small>':''}</div>`).join('')}</div>
     ${shared ? '<button class="linkbtn" id="b-leave" style="margin-top:6px">יציאה מהרשימה המשותפת</button>' : ''}`, () => {
     document.getElementById('b-share').onclick = async () => {
-      const text = `בוא נעשה רשימת קניות משותפת ב-Grocery List: ${location.origin}/\nנרשמים, לוחצים "רשימה נוספת" ← "הצטרפות עם קוד" ומקלידים: ${g.code}`;
+      const text = `בוא נעשה רשימת קניות משותפת ב-Grocery List: ${APP_URL}/\nנרשמים, לוחצים "רשימה נוספת" ← "הצטרפות עם קוד" ומקלידים: ${g.code}`;
       try{ if(navigator.share){ await navigator.share({title:'Grocery List — רשימת קניות', text}); } else { await navigator.clipboard.writeText(text); toast('ההזמנה הועתקה'); } }catch(e){}
     };
     const lv = document.getElementById('b-leave');
