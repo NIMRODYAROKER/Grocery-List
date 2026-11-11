@@ -248,8 +248,15 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .item .avatar{width:24px;height:24px;font-size:.68rem;border-width:0}
 /* "לא נקנה" */
 .item.miss{background:var(--miss-soft)}
-.item.miss .check{background:var(--miss);border-color:var(--miss)}
-.item.miss .check svg{opacity:1;transform:none;color:#fff}
+.miss-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:32px;padding:0 10px;border-radius:999px;border:1.5px dashed rgba(210,88,62,.55);color:var(--miss);font-family:var(--font-head);font-weight:600;font-size:.85rem;transition:all .2s var(--ease)}
+.miss-btn svg{width:13px;height:13px;stroke-width:3}
+.miss-btn:hover{background:var(--miss-soft);border-style:solid}
+.item.miss .miss-btn{background:var(--miss);border:1.5px solid var(--miss);color:#fff}
+/* הסבר קצר מעל הרשימה */
+.howto{display:flex;gap:10px;align-items:flex-start;background:var(--miss-soft);border:1.5px solid rgba(210,88,62,.3);border-radius:12px;padding:10px 12px;margin:4px 0 6px;font-size:.92rem;line-height:1.45}
+.howto .ic{width:26px;height:26px;border-radius:50%;background:var(--miss);color:#fff;display:grid;place-items:center;flex:none;margin-top:1px}
+.howto .ic svg{width:13px;height:13px;stroke-width:3}
+.howto b{color:var(--miss)}
 .item.miss .name>span{text-decoration:line-through;text-decoration-color:var(--miss);text-decoration-thickness:2px}
 .item.miss .name small{color:var(--miss);font-weight:600}
 
@@ -692,7 +699,9 @@ function renderList(){
   const seen = new Set([...body.querySelectorAll('.cat.seen')].map(el => el.dataset.cat));
   const groups = {};
   items.forEach(x => (groups[x.cat] ||= []).push(x));
-  body.innerHTML = CAT_ORDER.filter(c=>groups[c]).map(c => `
+  body.innerHTML = `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
+      <span>בסופר? לחצו <b>"לא נמצא"</b> על כל מוצר שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" — מה שסומן יישאר ברשימה, וכל השאר יימחק.</span></div>`
+    + CAT_ORDER.filter(c=>groups[c]).map(c => `
     <section class="cat ${seen.has(c)?'seen':''}" data-cat="${c}" aria-label="${CATS[c].name}">
       <div class="cat-head"><span class="cat-dot" style="background:${CATS[c].color}"><svg class="i"><use href="#c-${c}"/></svg></span>
         <h3>${CATS[c].name}</h3><span class="count">${groups[c].length}</span></div>
@@ -702,17 +711,17 @@ function renderList(){
   body.querySelectorAll('.cat:not(.seen)').forEach(el => io.observe(el));
 
   const bought = items.length - miss.length;
-  document.getElementById('finish-hint').textContent = miss.length ? `${miss.length} לא נקנו — יישארו ברשימה` : 'סמן רק מה שלא הצלחת לקנות';
+  document.getElementById('finish-hint').textContent = miss.length ? `${miss.length} לא נמצאו — יישארו ברשימה` : 'סמנו "לא נמצא" על מה שלא היה בסופר';
   document.getElementById('finish-txt').textContent = `סיימתי קנייה · ${bought} נקנו`;
   document.getElementById('finish').classList.add('show');
 }
 function itemHTML(x){
   const u = userOf(x.by);
   return `<li class="item ${x.miss?'miss':''}" data-id="${x.id}" style="animation:none">
-    <button class="check" data-act="toggle" aria-pressed="${!!x.miss}" aria-label="${x.miss?'ביטול סימון':'סימון שלא נקנה'}: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
-    <button class="name" data-act="toggle" tabindex="-1"><span>${esc(x.name)}</span><small>${x.miss ? 'לא נקנה, יישאר לפעם הבאה' : 'הוסיף/ה '+esc(u.name)}</small></button>
+    <button class="name" data-act="toggle" tabindex="-1"><span>${esc(x.name)}</span><small>${x.miss ? 'יישאר ברשימה לפעם הבאה' : 'הוסיף/ה '+esc(u.name)}</small></button>
     ${x.qty > 1 ? `<span class="qbadge" aria-label="כמות ${x.qty}">×${x.qty}</span>` : ''}
     ${avatarHTML(u)}
+    <button class="miss-btn" data-act="toggle" aria-pressed="${!!x.miss}" aria-label="${x.miss?'ביטול: נמצא':'סימון שלא נמצא'}: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
 }
@@ -738,13 +747,26 @@ document.getElementById('list-body').addEventListener('click', e => {
 /* סיום קנייה: כל מה שלא סומן נחשב נקנה ונמחק; מה שסומן נשאר והסימון מתאפס */
 document.getElementById('btn-finish').onclick = () => {
   if(!LIST) return;
+  const missing = LIST.items.filter(x=>x.miss), bought = LIST.items.length - missing.length;
+  openSheet(`<h3 id="sheet-title">לסיים את הקנייה?</h3>
+    <p>${bought === 1 ? 'מוצר אחד נקנה וימחק' : bought + ' מוצרים נקנו וימחקו'} מהרשימה.${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ' לא סימנתם אף מוצר כ"לא נמצא", אז הרשימה תתרוקן.'}</p>
+    <div class="stack">
+      <button type="button" class="btn btn-primary btn-block" id="f-ok"><svg class="i"><use href="#i-check"/></svg>כן, סיימתי</button>
+      <button type="button" class="btn btn-block" id="f-cancel">עוד לא, חזרה לרשימה</button>
+    </div>`, () => {
+    document.getElementById('f-cancel').onclick = closeSheet;
+    document.getElementById('f-ok').onclick = () => { closeSheet(); finishShopping(); };
+  });
+};
+/* סיום קנייה: כל מה שלא סומן נחשב נקנה ונמחק; מה שסומן נשאר והסימון מתאפס */
+function finishShopping(){
   const before = LIST.items.map(x => ({...x})), lid = LIST.id;
   const bought = LIST.items.filter(x=>!x.miss).length, left = LIST.items.filter(x=>x.miss);
   left.forEach(x => x.miss = false); LIST.items = left; renderList();
   sync(api(`/api/lists/${lid}/finish`, {}));
   toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',
     () => sync(api(`/api/lists/${lid}/restore`, {replace: before})));
-};
+}
 
 /* ===== הוספה: כותבים, Enter, וזה נכנס לרשימה ===== */
 const addInput = document.getElementById('add-input');
