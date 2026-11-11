@@ -125,6 +125,8 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke
 .mini-items li b{color:#334061;font-family:var(--font-head);font-size:.88rem}
 .mini-items li.more{color:var(--muted);font-weight:400;font-size:.9rem}
 .mini-empty{color:var(--muted);margin:0 0 14px}
+.mini-count{color:var(--muted);margin:2px 0 14px;font-size:1rem}
+.mini-count b{font-family:var(--font-head);font-size:1.5rem;color:#334061;margin-left:4px}
 .mini .btn .cnt{background:rgba(255,255,255,.18);border-radius:999px;min-width:26px;height:24px;display:inline-grid;place-items:center;padding:0 8px;font-size:.85rem}
 .mini .btn-ghost .cnt{background:var(--accent-soft)}
 .mini:not(.main){padding:14px 16px}
@@ -588,15 +590,13 @@ function renderHome(){
   document.getElementById('h-sub').textContent = total ? `יש ${total} מוצרים שמחכים לקנייה.` : 'הרשימות ריקות — הזמן להתחיל לכתוב.';
   document.getElementById('home-lists').innerHTML = lists.map((g,i) => {
     const others = g.members.filter(m => m.id !== u.id);
-    const preview = g.preview.map(x => `<li>${esc(x.name)}${x.qty>1?` <b>×${x.qty}</b>`:''}</li>`).join('');
-    const more = g.count > 4 ? `<li class="more">ועוד ${g.count-4}...</li>` : '';
     return `<article class="mini ${i===0?'main':''}">
       <div class="mini-top"><div><h3>${esc(listName(g))}</h3>
         <small>${others.length ? 'משותפת עם '+others.map(o=>esc(o.name)).join(', ') : 'רק שלך'}</small></div>
         <span class="mini-side"><span class="avatars">${g.members.slice(0,4).map(m=>avatarHTML(m)).join('')}</span>
         <button class="mini-del" data-del="${g.id}" aria-label="מחיקת ${esc(listName(g))}"><svg class="i"><use href="#i-trash"/></svg></button></span></div>
-      ${g.count ? `<ul class="mini-items">${preview}${more}</ul>` : `<p class="mini-empty">עדיין ריקה</p>`}
-      <button class="btn ${i===0?'btn-primary':'btn-ghost'} btn-block" data-open="${g.id}">${i===0?'לרשימה':'פתיחה'}<span class="cnt">${g.count}</span><svg class="i" style="transform:scaleX(-1)"><use href="#i-back"/></svg></button>
+      <p class="mini-count">${g.count ? `<b>${g.count}</b> ${g.count === 1 ? 'מוצר ברשימה' : 'מוצרים ברשימה'}` : 'עדיין ריקה'}</p>
+      <button class="btn ${i===0?'btn-primary':'btn-ghost'} btn-block" data-open="${g.id}">${i===0?'לרשימה':'פתיחה'}<svg class="i" style="transform:scaleX(-1)"><use href="#i-back"/></svg></button>
     </article>`;
   }).join('');
 }
