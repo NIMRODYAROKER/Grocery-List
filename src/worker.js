@@ -264,11 +264,12 @@ export class GroceryDB extends DurableObject {
         return json(this.listFull(l));
       }
     }
-    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete)$/)) && method === 'POST') {
+    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete|qty)$/)) && method === 'POST') {
       const it = this.one('SELECT * FROM items WHERE id = ?', m[1]);
       if (!it) throw new HttpError(404, 'המוצר כבר לא ברשימה');
       const l = this.needMember(it.list_id, me.id);
       if (m[2] === 'miss') this.sql.exec('UPDATE items SET miss = ? WHERE id = ?', body.miss ? 1 : 0, it.id);
+      else if (m[2] === 'qty') this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.max(1, Math.min(99, parseInt(body.qty) || 1)), it.id);
       else this.sql.exec('DELETE FROM items WHERE id = ?', it.id);
       this.touch(l.id);
       return json(this.listFull(this.one('SELECT * FROM lists WHERE id = ?', l.id)));

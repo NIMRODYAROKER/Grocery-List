@@ -241,7 +241,20 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .check svg{width:15px;height:15px;stroke-width:3;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
 .item .name{flex:1;min-width:0;font-weight:500;font-size:1.08rem;text-align:right;display:flex;flex-direction:column;line-height:1.3}
 .item .name small{font-weight:400;color:var(--muted);font-size:.8rem}
-.qbadge{font-family:var(--font-head);font-weight:700;font-size:.88rem;color:var(--accent);direction:ltr}
+.qbadge{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;width:46px;height:44px;border-radius:12px;border:1.5px solid rgba(51,64,97,.3);background:rgba(255,255,255,.5);color:var(--accent);line-height:1;transition:all .2s var(--ease)}
+.qbadge b{font-family:var(--font-head);font-size:1.25rem;font-weight:700}
+.qbadge small{font-size:.66rem;font-weight:600;opacity:.75;margin-top:2px}
+.qbadge.more{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.qbadge:hover{transform:translateY(-1px);box-shadow:0 4px 10px -4px rgba(30,40,70,.5)}
+.item.miss .qbadge{opacity:.55}
+/* חלון שינוי כמות */
+.stepper{direction:ltr;display:flex;align-items:center;justify-content:center;gap:22px;margin:8px 0 20px}
+.stepper button{width:62px;height:62px;border-radius:50%;border:2px solid var(--line-strong);font-size:2rem;font-weight:700;display:grid;place-items:center;color:var(--ink);transition:all .15s}
+.stepper button:hover{border-color:var(--accent);background:var(--accent-soft)}
+.stepper button:active{transform:scale(.92)}
+.stepper button:disabled{opacity:.35}
+.stepper output{font-family:var(--font-head);font-size:3rem;font-weight:700;min-width:70px;text-align:center;color:var(--ink)}
+.qchips{direction:ltr;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
 .del{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#a3aaa2;transition:color .2s,background .2s}
 .del:hover{color:var(--miss);background:var(--miss-soft)}
 .del svg{width:16px;height:16px}
@@ -414,7 +427,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
         <input id="add-input" placeholder="מה צריך לקנות?" enterkeyhint="enter" autocomplete="off">
         <button class="btn btn-primary" type="button" data-submit aria-label="הוספה"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
-      <p class="tip">כותבים ולוחצים Enter. כמה מוצרים בבת אחת? מפרידים בפסיק — "חלב, 3 עגבניות, לחם"</p>
+      <p class="tip">כותבים ולוחצים Enter. כמה מוצרים בבת אחת? מפרידים בפסיק — "חלב, 3 עגבניות, לחם". לשינוי כמות לוחצים על המספר ליד המוצר.</p>
     </div>
 
     <div id="list-body" aria-live="polite"></div>
@@ -463,7 +476,7 @@ function onSubmit(id, fn){
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s||'').trim().replace(/\s+/g,' ');
-const tmpId = () => 't' + Math.random().toString(36).slice(2,10);
+const tmpId = () => 'tmp:' + Math.random().toString(36).slice(2,10);
 const initials = n => String(n||'?').trim().slice(0,1);
 
 /* ===== חיבור לשרת: כל הנתונים נשמרים בענן ===== */
@@ -719,8 +732,7 @@ function itemHTML(x){
   const u = userOf(x.by);
   return `<li class="item ${x.miss?'miss':''}" data-id="${x.id}" style="animation:none">
     <button class="name" data-act="toggle" tabindex="-1"><span>${esc(x.name)}</span><small>${x.miss ? 'יישאר ברשימה לפעם הבאה' : 'הוסיף/ה '+esc(u.name)}</small></button>
-    ${x.qty > 1 ? `<span class="qbadge" aria-label="כמות ${x.qty}">×${x.qty}</span>` : ''}
-    ${avatarHTML(u)}
+    <button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי"><b>${x.qty}</b><small>יח׳</small></button>
     <button class="miss-btn" data-act="toggle" aria-pressed="${!!x.miss}" aria-label="${x.miss?'ביטול: נמצא':'סימון שלא נמצא'}: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
@@ -731,7 +743,8 @@ function hideFinish(){ document.getElementById('finish').classList.remove('show'
 document.getElementById('list-body').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b || !LIST) return;
   const li = b.closest('[data-id]'), x = LIST.items.find(i => i.id === li.dataset.id); if(!x) return;
-  if(x.id.startsWith('t')) return; // עוד לא נשמר בשרת
+  if(x.id.startsWith('tmp:')) return; // עוד לא נשמר בשרת
+  if(b.dataset.act === 'qty') return openQty(x);
   if(b.dataset.act === 'toggle'){
     x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
     sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
@@ -766,6 +779,32 @@ function finishShopping(){
   sync(api(`/api/lists/${lid}/finish`, {}));
   toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',
     () => sync(api(`/api/lists/${lid}/restore`, {replace: before})));
+}
+
+/* ===== שינוי כמות למוצר ===== */
+function openQty(x){
+  let q = x.qty;
+  openSheet(`<h3 id="sheet-title">${esc(x.name)}</h3><p>כמה יחידות צריך לקנות?</p>
+    <div class="stepper">
+      <button type="button" id="q-minus" aria-label="פחות אחד">−</button>
+      <output id="q-val" aria-live="polite">${q}</output>
+      <button type="button" id="q-plus" aria-label="עוד אחד">+</button>
+    </div>
+    <div class="qchips">${[1,2,3,4,6,10].map(n=>`<button type="button" class="chip" data-q="${n}">${n}</button>`).join('')}</div>
+    <div class="stack"><button type="button" class="btn btn-primary btn-block" id="q-ok">שמירה</button></div>`, () => {
+    const out = document.getElementById('q-val'), minus = document.getElementById('q-minus');
+    const paint = () => { out.textContent = q; minus.disabled = q <= 1; };
+    paint();
+    minus.onclick = () => { q = Math.max(1, q-1); paint(); };
+    document.getElementById('q-plus').onclick = () => { q = Math.min(99, q+1); paint(); };
+    document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { q = +b.dataset.q; paint(); });
+    document.getElementById('q-ok').onclick = () => {
+      closeSheet();
+      if(q === x.qty || !LIST) return;
+      x.qty = q; renderList();
+      sync(api(`/api/items/${x.id}/qty`, {qty: q}));
+    };
+  });
 }
 
 /* ===== הוספה: כותבים, Enter, וזה נכנס לרשימה ===== */
@@ -914,6 +953,23 @@ function toast(msg, undo){
   b.hidden = !undo; b.onclick = () => { undo(); t.classList.remove('show'); };
   t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), undo ? 4200 : 2400);
 }
+
+/* ===== עדכון אוטומטי לגרסה החדשה ===== */
+let APP_TAG = null;
+async function checkUpdate(){
+  try{
+    const r = await fetch(location.pathname, {method:'HEAD', cache:'no-store'});
+    const tag = r.headers.get('etag') || r.headers.get('last-modified');
+    if(!tag) return;
+    if(APP_TAG && tag !== APP_TAG){
+      const busy = sheet.classList.contains('open') || (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.value);
+      if(!busy) location.reload();
+    } else APP_TAG = tag;
+  }catch(e){}
+}
+checkUpdate();
+setInterval(checkUpdate, 60000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) checkUpdate(); });
 
 route();
 </script>
