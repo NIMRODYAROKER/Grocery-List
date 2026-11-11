@@ -247,14 +247,15 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .qbadge.more{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .qbadge:hover{transform:translateY(-1px);box-shadow:0 4px 10px -4px rgba(30,40,70,.5)}
 .item.miss .qbadge{opacity:.55}
-/* חלון שינוי כמות */
-.stepper{direction:ltr;display:flex;align-items:center;justify-content:center;gap:22px;margin:8px 0 20px}
-.stepper button{width:62px;height:62px;border-radius:50%;border:2px solid var(--line-strong);font-size:2rem;font-weight:700;display:grid;place-items:center;color:var(--ink);transition:all .15s}
-.stepper button:hover{border-color:var(--accent);background:var(--accent-soft)}
-.stepper button:active{transform:scale(.92)}
-.stepper button:disabled{opacity:.35}
-.stepper output{font-family:var(--font-head);font-size:3rem;font-weight:700;min-width:70px;text-align:center;color:var(--ink)}
-.qchips{direction:ltr;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+/* חלון שינוי כמות: גלגל בחירה בסגנון אפל */
+.wheel{position:relative;height:220px;margin:4px auto 18px;max-width:260px;direction:ltr}
+.wheel-list{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;list-style:none;padding:88px 0;margin:0;
+  -webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);overscroll-behavior:contain}
+.wheel-list::-webkit-scrollbar{display:none}
+.wheel-list li{height:44px;display:grid;place-items:center;scroll-snap-align:center;font-family:var(--font-head);font-size:1.5rem;font-weight:500;color:var(--muted);cursor:pointer;transition:color .15s,font-size .15s;user-select:none}
+.wheel-list li.on{color:var(--ink);font-size:2rem;font-weight:700}
+.wheel-band{position:absolute;left:0;right:0;top:88px;height:44px;border-radius:12px;background:rgba(51,64,97,.09);border:1.5px solid rgba(51,64,97,.18);pointer-events:none}
+.wheel-unit{position:absolute;top:88px;height:44px;right:22px;display:grid;place-items:center;color:var(--muted);font-weight:600;pointer-events:none}
 .del{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#a3aaa2;transition:color .2s,background .2s}
 .del:hover{color:var(--miss);background:var(--miss-soft)}
 .del svg{width:16px;height:16px}
@@ -783,21 +784,33 @@ function finishShopping(){
 
 /* ===== שינוי כמות למוצר ===== */
 function openQty(x){
+  const MAX = 50, ROW = 44;
   let q = x.qty;
-  openSheet(`<h3 id="sheet-title">${esc(x.name)}</h3><p>כמה יחידות צריך לקנות?</p>
-    <div class="stepper">
-      <button type="button" id="q-minus" aria-label="פחות אחד">−</button>
-      <output id="q-val" aria-live="polite">${q}</output>
-      <button type="button" id="q-plus" aria-label="עוד אחד">+</button>
+  openSheet(`<h3 id="sheet-title">${esc(x.name)}</h3><p>גללו ובחרו כמה יחידות צריך.</p>
+    <div class="wheel">
+      <div class="wheel-band"></div>
+      <ul class="wheel-list" id="q-wheel" role="listbox" aria-label="כמות" tabindex="0">
+        ${Array.from({length:MAX},(_,i)=>`<li role="option" data-q="${i+1}">${i+1}</li>`).join('')}
+      </ul>
+      <span class="wheel-unit">יח׳</span>
     </div>
-    <div class="qchips">${[1,2,3,4,6,10].map(n=>`<button type="button" class="chip" data-q="${n}">${n}</button>`).join('')}</div>
     <div class="stack"><button type="button" class="btn btn-primary btn-block" id="q-ok">שמירה</button></div>`, () => {
-    const out = document.getElementById('q-val'), minus = document.getElementById('q-minus');
-    const paint = () => { out.textContent = q; minus.disabled = q <= 1; };
-    paint();
-    minus.onclick = () => { q = Math.max(1, q-1); paint(); };
-    document.getElementById('q-plus').onclick = () => { q = Math.min(99, q+1); paint(); };
-    document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { q = +b.dataset.q; paint(); });
+    const wheel = document.getElementById('q-wheel'), lis = [...wheel.children];
+    const mark = () => lis.forEach((li,i) => { const on = i+1 === q; li.classList.toggle('on', on); li.setAttribute('aria-selected', on); });
+    // מתחילים על הכמות הנוכחית
+    wheel.scrollTop = (q-1) * ROW; mark();
+    let t;
+    wheel.addEventListener('scroll', () => {
+      const n = Math.min(MAX, Math.max(1, Math.round(wheel.scrollTop / ROW) + 1));
+      if(n !== q){ q = n; mark(); if(navigator.vibrate) navigator.vibrate(4); }
+    });
+    // לחיצה על מספר מגלגלת אליו
+    wheel.addEventListener('click', e => { const li = e.target.closest('[data-q]'); if(li) wheel.scrollTo({top:(+li.dataset.q-1)*ROW, behavior:'smooth'}); });
+    // מקלדת: חצים למעלה ולמטה
+    wheel.addEventListener('keydown', e => {
+      if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = Math.min(MAX, Math.max(1, q + (e.key === 'ArrowDown' ? 1 : -1))); wheel.scrollTo({top:(n-1)*ROW, behavior:'smooth'}); }
+    });
+    wheel.focus({preventScroll:true});
     document.getElementById('q-ok').onclick = () => {
       closeSheet();
       if(q === x.qty || !LIST) return;
