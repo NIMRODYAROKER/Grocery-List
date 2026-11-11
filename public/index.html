@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2c3650">
 <title>Grocery List — רשימת קניות משותפת לבית</title>
@@ -331,6 +332,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .set-photo .acts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .linkbtn{color:var(--muted);font-size:.9rem;text-decoration:underline;text-underline-offset:3px}
 .linkbtn:hover{color:var(--miss)}
+.ver{text-align:center;color:var(--muted);font-size:.82rem;margin:4px 0 0}
 .divider{height:1.5px;background:var(--line);margin:4px 0}
 
 /* הודעה קופצת */
@@ -989,6 +991,7 @@ function openSettings(){
       <p class="err" id="s-err" role="alert"></p>
       <button type="button" class="btn btn-primary btn-block" id="s-save">שמירה</button>
       <button type="button" class="btn btn-ghost btn-block" id="s-out"><svg class="i"><use href="#i-logout"/></svg>התנתקות</button>
+      <p class="ver">גרסה ${APP_VERSION} · <button type="button" class="linkbtn" id="s-reload">רענון האפליקציה</button></p>
     </div>`, () => {
     const paint = () => {
       document.getElementById('s-av').innerHTML = avatarHTML({...u, ...draft, name:document.getElementById('s-name').value || u.name});
@@ -1021,6 +1024,7 @@ function openSettings(){
       try{ HOME = await api('/api/profile', body); closeSheet(); await route(); toast('הפרופיל עודכן'); }
       catch(e){ err.textContent = e.message; }
     };
+    document.getElementById('s-reload').onclick = () => location.reload();
     document.getElementById('s-out').onclick = () => { api('/api/logout', {}).catch(()=>{}); setToken(null); closeSheet(); document.querySelector('#auth-seg [data-mode=login]').click(); route(); };
   });
 }
@@ -1048,20 +1052,22 @@ function toast(msg, undo){
 }
 
 /* ===== עדכון אוטומטי לגרסה החדשה ===== */
-let APP_TAG = null;
+const APP_VERSION = '2026.11.11-2226';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
 async function checkUpdate(){
   try{
-    const r = await fetch(location.pathname, {method:'HEAD', cache:'no-store'});
-    const tag = r.headers.get('etag') || r.headers.get('last-modified');
-    if(!tag) return;
-    if(APP_TAG && tag !== APP_TAG){
+    const r = await fetch('version.txt?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) return;
+    const v = (await r.text()).trim();
+    if(v && v !== APP_VERSION){
       const busy = sheet.classList.contains('open') || (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.value);
       if(!busy) location.reload();
-    } else APP_TAG = tag;
+    }
   }catch(e){}
 }
 checkUpdate();
-setInterval(checkUpdate, 60000);
+setInterval(checkUpdate, 30000);
+window.addEventListener('focus', checkUpdate);
+window.addEventListener('pageshow', checkUpdate);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkUpdate(); });
 
 route();

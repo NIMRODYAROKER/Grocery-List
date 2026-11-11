@@ -10,7 +10,15 @@ export default {
       const stub = env.DB.get(env.DB.idFromName('main'));
       return stub.fetch(request);
     }
-    return env.ASSETS.fetch(request);
+    // הדף עצמו וקובץ הגרסה לא נשמרים בזיכרון של הטלפון, כדי שעדכונים יגיעו לכולם
+    const res = await env.ASSETS.fetch(request);
+    const type = res.headers.get('content-type') || '';
+    if (type.includes('text/html') || url.pathname.endsWith('version.txt')) {
+      const out = new Response(res.body, res);
+      out.headers.set('cache-control', 'no-cache, no-store, must-revalidate');
+      return out;
+    }
+    return res;
   }
 };
 
