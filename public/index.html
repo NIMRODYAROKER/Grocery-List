@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c3650">
+<title>Grocery List — רשימת קניות משותפת לבית</title>
+<meta name="description" content="רשימת קניות אחת לכל הבית: כולם מוסיפים, והרשימה מסתדרת לבד לפי מחלקות בסופר.">
+<!-- לוגו ואפליקציה במסך הבית -->
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grocery List">
+<!-- תצוגה מקדימה כשמשתפים קישור (וואטסאפ ועוד) -->
+<link rel="canonical" href="https://grocery-list.nimrodyaroker.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Grocery List">
+<meta property="og:title" content="Grocery List — רשימת קניות אחת לכל הבית">
+<meta property="og:description" content="כולם מוסיפים, והרשימה מסתדרת לבד לפי מחלקות בסופר.">
+<meta property="og:url" content="https://grocery-list.nimrodyaroker.workers.dev/">
+<meta property="og:image" content="https://grocery-list.nimrodyaroker.workers.dev/og-image.jpg">
+<meta property="og:image:secure_url" content="https://grocery-list.nimrodyaroker.workers.dev/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Grocery List — רשימת קניות אחת לכל הבית">
+<meta property="og:locale" content="he_IL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Grocery List — רשימת קניות אחת לכל הבית">
+<meta name="twitter:description" content="כולם מוסיפים, והרשימה מסתדרת לבד לפי מחלקות בסופר.">
+<meta name="twitter:image" content="https://grocery-list.nimrodyaroker.workers.dev/og-image.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   עיצוב: פתק אחד גדול תלוי על קיר בצבע מרווה
+   ========================================================= */
+:root{
+  --wall:#334061; --wall-2:#232c45;
+  --paper:#eee2cb; --paper-2:#ded0b4;
+  --text:#2a2e3b; --ink:#2a2e3b; --muted:#6f6a59;
+  --line:rgba(42,46,59,.12); --line-strong:rgba(42,46,59,.26);
+  --accent:#334061; --accent-ink:#eee2cb; --accent-soft:rgba(51,64,97,.10);
+  --miss:#d2583e; --miss-soft:rgba(210,88,62,.13);
+  --radius:16px; --radius-sm:12px;
+  --shadow:0 30px 50px -24px rgba(5,10,25,.8),0 3px 8px rgba(5,10,25,.25);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --font-head:"Fredoka","Heebo",system-ui,sans-serif;
+  --font-hand:"Fredoka","Heebo",system-ui,sans-serif;
+  --font-body:"Heebo",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:var(--font-body);font-size:17px;line-height:1.5;color:var(--text);
+  min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  background:var(--wall-2);
+}
+/* רקע: נייבי עמוק, הילות כחולות שזזות לאט ורשת עדינה שנמוגה */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(165deg,#2d3958 0%,#222b45 55%,#1b2238 100%)}
+.bg::before{content:"";position:absolute;inset:-1px;
+  background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:34px 34px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 20%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse 80% 60% at 50% 20%,#000 20%,transparent 75%)}
+.bg::after{content:"";position:absolute;inset:0;opacity:.18;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.bg i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:drift 26s ease-in-out infinite alternate}
+.bg i:nth-child(1){width:420px;height:420px;background:#4b63a8;top:-140px;right:-120px}
+.bg i:nth-child(2){width:360px;height:360px;background:#3a8aa0;bottom:-120px;left:-140px;opacity:.35;animation-duration:32s;animation-direction:alternate-reverse}
+.bg i:nth-child(3){width:260px;height:260px;background:#6b5aa8;top:45%;left:55%;opacity:.28;animation-duration:38s}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,50px) scale(1.15)}100%{transform:translate(40px,-30px) scale(.95)}}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:8px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.app{max-width:620px;margin:0 auto;padding:max(30px,calc(env(safe-area-inset-top) + 16px)) 14px 130px}
+
+/* ===== מסכים ===== */
+.view{display:none;position:relative;animation:fadeUp .5s var(--ease)}
+.view.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* מסך על הרקע הכהה: טקסט בהיר, כפתור ראשי בצבע הפתק */
+.view.dark{--ink:#f4efe0;--text:#f4efe0;--muted:#a9b2c9;--line:rgba(255,255,255,.12);--line-strong:rgba(255,255,255,.24);
+  --accent:#eee2cb;--accent-ink:#262d42;--accent-soft:rgba(238,226,203,.12);color:var(--text);padding:6px 4px}
+.view.dark .field{background:rgba(255,255,255,.07);color:var(--text)}
+.view.dark .field:focus{background:rgba(255,255,255,.12)}
+.view.dark .card{background:rgba(255,255,255,.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.view.dark .btn-primary:hover{background:#f6ecda}
+.view.dark .avatar{border-color:#262d42}
+/* הפתק: הרשימה עצמה */
+.view.paper{min-height:calc(100dvh - 60px);
+  background:
+    linear-gradient(90deg,transparent 0 calc(100% - 34px),rgba(210,88,62,.30) calc(100% - 34px) calc(100% - 32px),transparent calc(100% - 32px)),
+    linear-gradient(180deg,rgba(255,255,255,.35),transparent 30%),
+    var(--paper);
+  border-radius:6px;padding:30px 22px 34px 18px;padding-right:46px;
+  box-shadow:var(--shadow);transform-origin:50% 0;animation:hang .6s var(--ease)}
+.view.paper::after{content:"";position:absolute;bottom:0;left:0;width:34px;height:34px;border-radius:0 0 0 6px;
+  background:linear-gradient(45deg,#1f2740 50%,var(--paper-2) 50%);box-shadow:3px -3px 6px rgba(0,0,0,.08)}
+@keyframes hang{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ===== מסך הבית ===== */
+.home-hi{font-family:var(--font-head);font-size:clamp(1.9rem,7vw,2.5rem);font-weight:700;margin:26px 0 4px;line-height:1.15}
+#h-sub{margin-bottom:22px}
+.mini{background:var(--paper);color:#2a2e3b;border-radius:8px;padding:18px 18px 16px;margin-bottom:16px;box-shadow:var(--shadow);
+  transition:transform .3s var(--ease),box-shadow .3s var(--ease);
+  --ink:#2a2e3b;--muted:#6f6a59;--accent:#334061;--accent-ink:#eee2cb;--line-strong:rgba(42,46,59,.26);--accent-soft:rgba(51,64,97,.10)}
+.mini:hover{transform:translateY(-3px)}
+.mini-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.mini-side{display:flex;align-items:center;gap:8px}
+.mini-del{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#8a8473;transition:color .2s,background .2s}
+.mini-del:hover{color:var(--miss);background:var(--miss-soft)}
+.mini-del svg{width:18px;height:18px}
+.mini h3{font-size:1.25rem;font-weight:700}
+.mini.main h3{font-size:1.5rem}
+.mini small{color:var(--muted);font-size:.85rem}
+.mini .avatar{width:28px;height:28px;font-size:.72rem;border-color:var(--paper)}
+.mini-items{list-style:none;margin:0 0 14px;border-top:1.5px solid rgba(42,46,59,.1)}
+.mini-items li{padding:6px 2px;border-bottom:1.5px solid rgba(42,46,59,.1);font-weight:500}
+.mini-items li b{color:#334061;font-family:var(--font-head);font-size:.88rem}
+.mini-items li.more{color:var(--muted);font-weight:400;font-size:.9rem}
+.mini-empty{color:var(--muted);margin:0 0 14px}
+.mini .btn .cnt{background:rgba(255,255,255,.18);border-radius:999px;min-width:26px;height:24px;display:inline-grid;place-items:center;padding:0 8px;font-size:.85rem}
+.mini .btn-ghost .cnt{background:var(--accent-soft)}
+.mini:not(.main){padding:14px 16px}
+.mini:not(.main) .mini-items li:nth-child(n+3):not(.more){display:none}
+.add-list{margin-top:6px;border-style:dashed}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:rgba(42,46,59,.08);margin-bottom:16px}
+.seg button{min-height:42px;border-radius:10px;font-weight:700;color:var(--muted)}
+.seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.view.dark .seg{background:rgba(255,255,255,.08)}
+.view.dark .seg button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.danger{color:var(--miss)!important;border-color:rgba(210,88,62,.45)!important}
+.danger:hover{background:var(--miss-soft)!important}
+
+/* ===== לוגו וכותרות ===== */
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-hand);font-weight:700;font-size:1.6rem;line-height:1;color:var(--ink)}
+.brand-logo{width:40px;height:40px;border-radius:11px;box-shadow:0 6px 14px -6px rgba(0,0,0,.6)}
+.brand-mark{width:38px;height:38px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center}
+.brand-mark svg{width:22px;height:22px}
+h1,h2,h3{font-family:var(--font-head);line-height:1.2;color:var(--ink)}
+.hero-title{font-family:var(--font-hand);font-size:clamp(2.2rem,9vw,3.1rem);font-weight:700;line-height:1.1;margin:30px 0 12px}
+.hero-title mark{background:none;color:var(--miss);position:relative}
+.hero-title mark::after{content:"";position:absolute;inset:auto -4px 4px -4px;height:12px;background:rgba(210,88,62,.22);border-radius:40% 60% 50% 40%;z-index:-1}
+.lead{color:var(--muted);font-size:1.1rem;max-width:32ch}
+
+/* ===== כרטיסים, כפתורים ושדות ===== */
+.card{background:rgba(255,255,255,.45);border:1.5px solid var(--line);border-radius:var(--radius);padding:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 20px;border-radius:14px;font-family:var(--font-head);font-weight:700;font-size:1rem;transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 8px 18px -10px rgba(20,28,50,.9)}
+.btn-primary:hover{transform:translateY(-2px);background:#29344f;box-shadow:0 12px 22px -10px rgba(20,28,50,.9)}
+.btn-ghost{background:transparent;border:1.5px solid var(--line-strong);color:var(--ink)}
+.btn-ghost:hover{background:var(--accent-soft);transform:translateY(-2px)}
+.btn-block{width:100%}
+.icon-btn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;border:1.5px solid var(--line-strong);color:var(--ink);transition:background .2s,transform .2s var(--ease)}
+.icon-btn:hover{background:var(--accent-soft);transform:translateY(-1px)}
+.field{width:100%;min-height:52px;padding:0 16px;border-radius:12px;background:rgba(255,255,255,.6);border:1.5px solid var(--line-strong);transition:border-color .2s,background .2s}
+.field::placeholder{color:#97a097}
+.field:focus{outline:none;border-color:var(--accent);background:#fff}
+label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem}
+
+.colors{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.color-opt{width:40px;height:40px;border-radius:50%;border:3px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:transform .2s var(--ease)}
+.color-opt:hover{transform:scale(1.1)}
+.color-opt[aria-checked="true"]{border-color:var(--ink);transform:scale(1.1)}
+.chip{display:inline-flex;align-items:center;padding:7px 13px;border-radius:999px;border:1.5px dashed var(--line-strong);font-weight:600;font-size:.92rem;transition:all .2s var(--ease)}
+.chip:hover{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+
+.features{display:grid;gap:14px;margin:26px 0}
+.feature{display:flex;gap:14px;align-items:flex-start}
+.feature .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--accent-soft)!important;color:var(--accent)!important}
+.feature b{font-family:var(--font-head);display:block}
+.feature span{color:var(--muted);font-size:.95rem}
+
+/* ===== אווטרים ===== */
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-head);font-weight:700;font-size:.82rem;color:#22302c;flex:none;border:2px solid var(--paper)}
+.avatars{display:flex}
+.avatars .avatar{margin-inline-start:-9px}
+.avatars .avatar:first-child{margin-inline-start:0}
+.avatar-lg{width:42px;height:42px;font-size:1rem}
+
+/* ===== מסך קבוצות ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.me{display:flex;align-items:center;gap:10px;padding:4px 4px 4px 12px;border-radius:999px;border:1.5px solid var(--line-strong);font-weight:600;cursor:pointer;transition:background .2s}
+.me:hover{background:var(--accent-soft)}
+.me-btn{border-radius:50%;transition:transform .2s var(--ease)}
+.me-btn:hover{transform:scale(1.08)}
+.section-title{font-family:var(--font-hand);font-size:2.6rem;font-weight:700;line-height:1;margin:4px 0 14px}
+.group-card{display:flex;align-items:center;gap:14px;width:100%;text-align:right;padding:14px 4px;border:0;border-bottom:1.5px dashed var(--line-strong);border-radius:0;background:none;transition:transform .25s var(--ease),background .25s}
+.group-card:hover{transform:translateX(-4px);background:var(--accent-soft)}
+.group-card .gi{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none;color:#22302c}
+.group-card h3{font-size:1.15rem}
+.group-card p{color:var(--muted);font-size:.9rem}
+.group-card .badge{margin-inline-start:auto;background:var(--accent);color:var(--accent-ink);font-family:var(--font-head);font-weight:700;border-radius:999px;min-width:32px;height:32px;display:grid;place-items:center;padding:0 9px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.empty{text-align:center;padding:30px 14px;color:var(--muted);background:none;border:1.5px dashed var(--line-strong)}
+.empty .big{width:64px;height:64px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.empty .big svg{width:30px;height:30px}
+
+/* ===== מסך רשימה ===== */
+.list-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.list-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.list-head .title{flex:1;min-width:0}
+.list-head h2{font-family:var(--font-hand);font-size:2.1rem;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-name{display:block;width:100%;border:0;border-bottom:1.5px dashed transparent;background:none;font-family:var(--font-head);font-weight:500;font-size:1.05rem;color:var(--miss);padding:2px 0;margin:0 0 2px;transition:border-color .2s}
+.list-name::placeholder{color:#9a937e}
+.list-name:hover{border-bottom-color:var(--line-strong)}
+.list-name:focus{outline:none;border-bottom-color:var(--accent)}
+.list-head small{color:var(--muted);font-size:.88rem}
+
+.add-wrap{position:sticky;top:10px;z-index:20;margin-bottom:10px}
+.add-bar{display:flex;gap:6px;padding:5px;border-radius:14px;background:rgba(255,253,245,.92);border:1.5px solid var(--line-strong);box-shadow:0 8px 18px -12px rgba(30,45,40,.6);transition:border-color .2s}
+.add-bar:focus-within{border-color:var(--accent)}
+.add-bar input{flex:1;min-width:0;border:0;background:none;padding:0 10px;min-height:46px;font-size:1.05rem}
+.add-bar input:focus{outline:none}
+.add-bar input::placeholder{color:#97a097}
+.add-bar .btn{min-height:46px;padding:0 16px}
+.tip{color:var(--muted);font-size:.84rem;margin:7px 4px 0}
+
+/* מחלקות ופריטים: כל פריט הוא שורה בפתק */
+.cat{margin:16px 0 4px;opacity:0;transform:translateY(12px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.cat.seen{opacity:1;transform:none}
+.cat-head{display:flex;align-items:center;gap:8px;margin:0 0 2px;color:var(--accent)}
+.cat-dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#22302c}
+.cat-dot svg{width:14px;height:14px;stroke-width:2.3}
+.cat-head h3{font-family:var(--font-hand);font-size:1.08rem;font-weight:600;color:var(--accent);line-height:1.2}
+.cat-head .count{color:var(--muted);font-size:.85rem;margin-inline-start:auto}
+.items{list-style:none}
+.item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1.5px solid var(--line);transition:background .25s,transform .25s var(--ease);animation:itemIn .35s var(--ease)}
+.item:hover{background:rgba(255,255,255,.4);transform:translateX(-3px)}
+@keyframes itemIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.check{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-strong);display:grid;place-items:center;flex:none;transition:all .25s var(--ease)}
+.check svg{width:15px;height:15px;stroke-width:3;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
+.item .name{flex:1;min-width:0;font-weight:500;font-size:1.08rem;text-align:right;display:flex;flex-direction:column;line-height:1.3}
+.item .name small{font-weight:400;color:var(--muted);font-size:.8rem}
+.qbadge{font-family:var(--font-head);font-weight:700;font-size:.88rem;color:var(--accent);direction:ltr}
+.del{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#a3aaa2;transition:color .2s,background .2s}
+.del:hover{color:var(--miss);background:var(--miss-soft)}
+.del svg{width:16px;height:16px}
+.item .avatar{width:24px;height:24px;font-size:.68rem;border-width:0}
+/* "לא נקנה" */
+.item.miss{background:var(--miss-soft)}
+.item.miss .check{background:var(--miss);border-color:var(--miss)}
+.item.miss .check svg{opacity:1;transform:none;color:#fff}
+.item.miss .name>span{text-decoration:line-through;text-decoration-color:var(--miss);text-decoration-thickness:2px}
+.item.miss .name small{color:var(--miss);font-weight:600}
+
+/* כפתור סיום צף */
+.finish{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translate(-50%,150%);z-index:30;transition:transform .45s var(--ease);width:min(560px,calc(100% - 40px))}
+.finish.show{transform:translate(-50%,0)}
+.finish .btn{width:100%;min-height:56px;font-size:1.05rem;box-shadow:0 18px 30px -12px rgba(20,35,30,.8)}
+.finish-hint{text-align:center;font-size:.86rem;color:var(--ink);background:var(--paper);border-radius:10px;padding:5px 12px;margin:0 auto 8px;width:fit-content;box-shadow:0 4px 12px -4px rgba(0,0,0,.3)}
+
+/* ===== חלון תחתון: עוד פתק שעולה מלמטה ===== */
+.sheet-bg{position:fixed;inset:0;background:rgba(30,40,35,.45);backdrop-filter:blur(3px);z-index:50;opacity:0;pointer-events:none;transition:opacity .3s}
+.sheet-bg.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;inset-inline:0;bottom:0;z-index:51;max-width:540px;margin:0 auto;background:var(--paper);border-radius:22px 22px 0 0;padding:14px 22px max(24px,env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .4s var(--ease);max-height:92dvh;overflow-y:auto;box-shadow:0 -10px 30px rgba(0,0,0,.25)}
+.sheet.open{transform:none}
+.sheet .grip{width:42px;height:5px;border-radius:9px;background:var(--line-strong);margin:0 auto 16px}
+.sheet h3{font-family:var(--font-hand);font-size:1.6rem;font-weight:700;line-height:1.2;margin-bottom:6px}
+.sheet p{color:var(--muted);margin-bottom:16px}
+.code{display:flex;justify-content:center;gap:7px;direction:ltr;margin:6px 0 20px}
+.code span{width:44px;height:56px;border-radius:10px;background:#fff;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-family:var(--font-head);font-weight:800;font-size:1.5rem;color:var(--accent)}
+.members{display:grid;gap:10px;margin-bottom:20px}
+.member{display:flex;align-items:center;gap:12px;font-weight:600}
+.member small{color:var(--muted);font-weight:400;margin-inline-start:auto}
+.stack{display:grid;gap:12px}
+.err{color:var(--miss);font-size:.92rem;font-weight:600;min-height:1.3em}
+.set-photo{display:flex;align-items:center;gap:16px;margin-bottom:4px}
+.set-photo .avatar{width:82px;height:82px;font-size:2rem;border:3px solid #fff;box-shadow:0 4px 12px -4px rgba(0,0,0,.3)}
+.set-photo .acts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.linkbtn{color:var(--muted);font-size:.9rem;text-decoration:underline;text-underline-offset:3px}
+.linkbtn:hover{color:var(--miss)}
+.divider{height:1.5px;background:var(--line);margin:4px 0}
+
+/* הודעה קופצת */
+.toast{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translate(-50%,-170%);z-index:60;background:var(--ink);color:var(--paper);border-radius:14px;padding:11px 14px 11px 18px;display:flex;align-items:center;gap:14px;font-weight:700;box-shadow:0 12px 24px -10px rgba(0,0,0,.6);transition:transform .4s var(--ease);max-width:calc(100% - 32px)}
+.toast.show{transform:translate(-50%,0)}
+.toast button{color:#ffb19f;font-family:var(--font-head);font-weight:800;padding:4px 8px;border-radius:8px}
+
+@media (max-width:440px){.row2{grid-template-columns:1fr}}
+.row2 .btn{white-space:nowrap}
+@media (min-width:760px){
+  .app{padding-top:46px;max-width:680px}
+  .hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:center}
+  .view.paper{padding:40px 40px 40px 34px;padding-right:66px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .cat{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<!-- רקע: כחול כהה עם הילות צבע זזות ורשת עדינה -->
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<!-- ספריית אייקונים (SVG) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-basket" viewBox="0 0 24 24"><path d="M5 10h14l-1.5 9a2 2 0 0 1-2 1.7h-7a2 2 0 0 1-2-1.7z"/><path d="M8 10l4-6 4 6"/><path d="M10 14v3M14 14v3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1.5 1.5 0 0 0 1.5 1.1h9.3a1.5 1.5 0 0 0 1.4-1.1L22 7H6"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></symbol>
+    <!-- אייקוני מחלקות -->
+    <symbol id="c-produce" viewBox="0 0 24 24"><path d="M12 7c-4 0-7 3-7 7s3 7 7 7 7-3 7-7-3-7-7-7z"/><path d="M12 7c0-2 1-4 3-5"/></symbol>
+    <symbol id="c-dairy" viewBox="0 0 24 24"><path d="M8 2h8M9 2v3l-2 4v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9l-2-4V2"/><path d="M7 13h10"/></symbol>
+    <symbol id="c-bakery" viewBox="0 0 24 24"><path d="M4 11a4 4 0 0 1 4-6h8a4 4 0 0 1 4 6v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M9 9v4M15 9v4"/></symbol>
+    <symbol id="c-meat" viewBox="0 0 24 24"><path d="M15 3a6 6 0 0 1 6 6c0 5-6 9-11 11-3 1-6-2-5-5C7 10 10 3 15 3z"/><circle cx="14.5" cy="9.5" r="2"/></symbol>
+    <symbol id="c-pantry" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="14" rx="2"/><path d="M7 7V4h10v3M5 12h14"/></symbol>
+    <symbol id="c-frozen" viewBox="0 0 24 24"><path d="M12 2v20M4 6.5l16 11M20 6.5l-16 11"/><path d="M9 3.5l3 2 3-2M9 20.5l3-2 3 2"/></symbol>
+    <symbol id="c-drinks" viewBox="0 0 24 24"><path d="M10 2h4v4l2 3v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V9l2-3z"/><path d="M8 13h8"/></symbol>
+    <symbol id="c-snacks" viewBox="0 0 24 24"><path d="M6 3h12l-1 4 1 14H6l1-14z"/><path d="M7 7h10"/></symbol>
+    <symbol id="c-clean" viewBox="0 0 24 24"><path d="M9 2h5v4H9zM11.5 6v2"/><path d="M8 8h7l2 4v9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-9z"/><path d="M14 2h4"/></symbol>
+    <symbol id="c-care" viewBox="0 0 24 24"><path d="M12 2c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></symbol>
+    <symbol id="c-baby" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M7 21a5 5 0 0 1 10 0M10.5 9h.01M13.5 9h.01"/></symbol>
+    <symbol id="c-other" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
+  </defs>
+</svg>
+
+<main class="app" id="app">
+
+  <!-- ===== מסך 1: היכרות ויצירת משתמש ===== -->
+  <section class="view dark" id="view-welcome" aria-labelledby="w-title">
+    <div class="brand"><span class="brand-mark"><svg class="i"><use href="#i-basket"/></svg></span><span dir="ltr">Grocery List</span></div>
+    <div class="hero-grid">
+      <div>
+        <h1 class="hero-title" id="w-title">רשימת קניות אחת<br>ל<mark>כל הבית.</mark></h1>
+        <p class="lead">כל אחד מוסיף מה שנגמר, והרשימה מסדרת את עצמה לפי מחלקות בסופר.</p>
+      </div>
+      <div class="card stack" id="form-user">
+        <div class="seg" id="auth-seg" role="tablist" style="margin-bottom:4px">
+          <button role="tab" aria-selected="true" data-mode="login">כניסה</button>
+          <button role="tab" aria-selected="false" data-mode="signup">משתמש חדש</button>
+        </div>
+        <h2 style="font-size:1.4rem" id="auth-title">כניסה</h2>
+        <div>
+          <label class="lbl" for="user-name" id="user-name-lbl">שם משתמש או מייל</label>
+          <input class="field" id="user-name" maxlength="120" autocomplete="username" placeholder="רועי או roy@gmail.com" required>
+        </div>
+        <div id="email-row" hidden>
+          <label class="lbl" for="user-email">מייל</label>
+          <input class="field" id="user-email" type="email" maxlength="120" autocomplete="email" dir="ltr" placeholder="name@gmail.com">
+        </div>
+        <div>
+          <label class="lbl" for="user-pass">סיסמה</label>
+          <input class="field" id="user-pass" type="password" maxlength="40" autocomplete="current-password" placeholder="לפחות 4 תווים" required>
+        </div>
+        <p class="err" id="user-err" role="alert"></p>
+        <button class="btn btn-primary btn-block" type="button" data-submit><span id="auth-btn-txt">כניסה</span><svg class="i"><use href="#i-back"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== מסך הבית ===== -->
+  <section class="view dark" id="view-home" aria-labelledby="h-title">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark"><svg class="i"><use href="#i-basket"/></svg></span><span dir="ltr">Grocery List</span></div>
+      <button class="me" id="me-pill" aria-label="הגדרות משתמש"></button>
+    </div>
+    <h1 class="home-hi" id="h-title"></h1>
+    <p class="lead" id="h-sub"></p>
+    <div id="home-lists"></div>
+    <button class="btn btn-ghost btn-block add-list" id="btn-add-list"><svg class="i"><use href="#i-plus"/></svg>רשימה נוספת</button>
+  </section>
+
+  <!-- ===== הרשימה: פתק אחד גדול ===== -->
+  <section class="view paper" id="view-list" aria-labelledby="l-title">
+    <div class="list-bar">
+      <button class="icon-btn" id="btn-home" aria-label="חזרה למסך הבית"><svg class="i"><use href="#i-back"/></svg></button>
+      <span style="flex:1"></span>
+      <button class="icon-btn" id="btn-invite" aria-label="שיתוף הרשימה עם בני הבית"><svg class="i"><use href="#i-users"/></svg></button>
+      <button class="icon-btn" id="btn-reset" aria-label="איפוס הרשימה"><svg class="i"><use href="#i-repeat"/></svg></button>
+    </div>
+    <div class="list-head">
+      <div class="title">
+        <h2 id="l-title">רשימת הקניות</h2>
+        <label for="list-name" class="sr-only">שם הרשימה</label>
+        <input id="list-name" class="list-name" maxlength="26" placeholder="+ הוסף שם לרשימה" autocomplete="off">
+        <small id="l-sub"></small>
+      </div>
+    </div>
+
+    <div class="add-wrap">
+      <div class="add-bar" id="form-add">
+        <label for="add-input" class="sr-only">הוספת מוצר</label>
+        <input id="add-input" placeholder="מה צריך לקנות?" enterkeyhint="enter" autocomplete="off">
+        <button class="btn btn-primary" type="button" data-submit aria-label="הוספה"><svg class="i"><use href="#i-plus"/></svg></button>
+      </div>
+      <p class="tip">כותבים ולוחצים Enter. כמה מוצרים בבת אחת? מפרידים בפסיק — "חלב, 3 עגבניות, לחם"</p>
+    </div>
+
+    <div id="list-body" aria-live="polite"></div>
+  </section>
+</main>
+
+<!-- כפתור סיום קנייה -->
+<div class="finish" id="finish"><p class="finish-hint" id="finish-hint"></p><button class="btn btn-primary" id="btn-finish"><svg class="i"><use href="#i-check"/></svg><span id="finish-txt">סיימתי קנייה</span></button></div>
+
+<!-- חלון תחתון כללי -->
+<div class="sheet-bg" id="sheet-bg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="grip"></div><div id="sheet-body"></div></div>
+
+<!-- הודעה קופצת -->
+<div class="toast" id="toast" role="status"><span id="toast-txt"></span><button id="toast-btn" hidden>ביטול</button></div>
+
+<script>
+/* =========================================================
+   נתונים ושמירה (localStorage, מסונכרן בין לשוניות)
+   ========================================================= */
+const COLORS = ['#8fb3d9','#f0a48c','#9cc59a','#c2a7dd','#f2c66d','#7fc3b8','#e99ab0'];
+
+/* מחלקות: שם, צבע, אייקון ומילות מפתח לזיהוי אוטומטי */
+const CATS = {
+  produce:{name:'פירות וירקות',color:'#a8cf9a',kw:['עגבני','מלפפון','בצל','שום','תפוח','תפו"א','בננ','גזר','חסה','פלפל','לימון','אבוקדו','תפוז','ענב','אבטיח','מלון','קישוא','חציל','כרוב','ברוקולי','כרובית','פטרי','תות','אגס','קלמנטינ','שזיף','אפרסק','מנגו','פטרוזיליה','כוסברה','שמיר','נענע','בטטה','סלרי','צנון','סלק','תירס','רימון','קיווי','ג\'ינג\'ר','דלעת','עירית','בזיליקום','תמר']},
+  dairy:{name:'מוצרי חלב וביצים',color:'#f4dc8a',kw:['חלב','גבינ','קוטג','יוגורט','שמנת','חמאה','ביצ','לבנה','מעדן','שוקו','בולגרית','צפתית','מוצרלה','פרמזן','צהובה','מילקי','דנונה','אשל','גיל','משקה סויה','משקה שקדים']},
+  bakery:{name:'לחם ומאפים',color:'#efb980',kw:['לחם','פית','לחמני','חלה','באגט','טורטי','בייגל','קרואסון','עוגה','עוגיות','קרקר','פריכיות','בורקס','רוגלך','מאפה']},
+  meat:{name:'בשר, עוף ודגים',color:'#ee9f88',kw:['עוף','חזה','שניצל','כרעיים','פרגיות','בשר','טחון','סטייק','אנטריקוט','נקניק','קבב','המבורגר','סלמון','טונה','דג','אמנון','לברק','הודו','פסטרמה','כבד','שוקיים']},
+  pantry:{name:'מזווה ויבשים',color:'#d9bf96',kw:['אורז','פסטה','ספגטי','קמח','סוכר','מלח','שמן','חומץ','קפה','תה','קטשופ','מיונז','חומוס','טחינה','שימורי','רסק','קוסקוס','פתיתים','עדשים','שעועית','גרגירי','דבש','ריבה','ממרח','נוטלה','שקדים','אגוזי','פפריקה','כמון','תבלין','פירורי','שיבולת','קורנפלקס','דגני','רוטב','זיתים','מרק','אבקת','שמרים','וניל','סויה']},
+  frozen:{name:'קפואים',color:'#a6c8e6',kw:['קפוא','גלידה','ארטיק','אפונה','שעועית ירוקה','בצק עלים','פיצה','מלאווח','ג\'חנון','קרטיב','צ\'יפס']},
+  drinks:{name:'משקאות',color:'#94bde0',kw:['מים','סודה','קולה','ספרייט','מיץ','בירה','יין','פטל','משקה','אנרגיה','נביעות','זירו','תפוזינה','לימונדה','וודקה','ערק']},
+  snacks:{name:'חטיפים ומתוקים',color:'#eba7bb',kw:['במבה','ביסלי','שוקולד','חטיף','דוריטוס','צ\'יטוס','תפוצ\'יפס','סוכריות','מסטיק','ופל','פופקורן','גרעינים','קליק','כיף כף','פסק זמן','חטיפי']},
+  clean:{name:'ניקיון ובית',color:'#93cfc3',kw:['אקונומיקה','סבון כלים','נוזל','מרכך','אבקת כביסה','ג\'ל כביסה','נייר טואלט','מגבות נייר','שקיות','ספוג','מטליות','סנו','אל סבון','נייר אפייה','נייר כסף','ניילון','טבליות','מנקה','שואב','סקוץ\'','מגבונים','פח','נרות']},
+  care:{name:'טיפוח והיגיינה',color:'#c4b0e0',kw:['שמפו','מרכך שיער','סבון','משחת שיניים','מברשת','דאודורנט','קרם','סכין גילוח','תחבושות','טמפונים','צמר גפן','מקלוני','פלסטר','אקמול','נורופן','ויטמין','קונדישנר','ג\'ל רחצה','תער']},
+  baby:{name:'תינוקות',color:'#f2cf86',kw:['חיתולים','האגיס','פמפרס','מטרנה','סימילאק','מוצץ','מחית','דייסה','מגבונים לחים']},
+  other:{name:'שונות',color:'#cfc6ad',kw:[]}
+};
+const CAT_ORDER = ['produce','bakery','dairy','meat','pantry','frozen','drinks','snacks','clean','care','baby','other'];
+
+
+/* "שליחה" בלי תגית form: לחיצה על הכפתור או Enter בשדה */
+function onSubmit(id, fn){
+  const box = document.getElementById(id);
+  box.querySelector('[data-submit]').addEventListener('click', fn);
+  box.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); fn(); } }));
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s||'').trim().replace(/\s+/g,' ');
+const tmpId = () => 't' + Math.random().toString(36).slice(2,10);
+const initials = n => String(n||'?').trim().slice(0,1);
+
+/* ===== חיבור לשרת: כל הנתונים נשמרים בענן ===== */
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(e){} }
+};
+let TOKEN = store.get('gl_token');   // מפתח ההתחברות של המשתמש במכשיר הזה
+let OPEN = store.get('gl_open');     // הרשימה שפתוחה כרגע
+let HOME = null;                     // המשתמש והרשימות שלו
+let LIST = null;                     // הרשימה הפתוחה, עם כל המוצרים
+
+async function api(path, body){
+  const opt = {method: body ? 'POST' : 'GET', headers: {}};
+  if(TOKEN) opt.headers.authorization = 'Bearer ' + TOKEN;
+  if(body){ opt.headers['content-type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  let r;
+  try{ r = await fetch(path, opt); }catch(e){ throw new Error('אין חיבור לאינטרנט. נסה שוב'); }
+  let data = {}; try{ data = await r.json(); }catch(e){}
+  if(r.status === 401 && TOKEN){ setToken(null); route(); }
+  if(!r.ok) throw Object.assign(new Error(data.error || 'משהו השתבש. נסה שוב'), {status: r.status});
+  return data;
+}
+function setToken(t){ TOKEN = t; store.set('gl_token', t); if(!t){ HOME = null; LIST = null; setOpen(null); } }
+function setOpen(id){ OPEN = id; store.set('gl_open', id); }
+const meId = () => HOME && HOME.me.id;
+function userOf(id){
+  const all = [...(LIST ? LIST.members : []), ...(HOME ? HOME.lists.flatMap(l => l.members) : []), ...(HOME ? [HOME.me] : [])];
+  return all.find(u => u.id === id) || {id, name:'?', color:'#cfc6ad'};
+}
+const listName = g => g && g.name ? g.name : 'רשימת הקניות';
+
+/* זיהוי מחלקה לפי מילות מפתח (או לפי מה שנקנה בעבר ברשימה) */
+function categorize(name){
+  const key = name.toLowerCase();
+  const h = LIST && LIST.history.find(x => x.name === name);
+  if(h) return h.cat;
+  let best = 'other', bestLen = 0;
+  for(const c of CAT_ORDER) for(const k of CATS[c].kw)
+    if(key.includes(k) && k.length > bestLen){ best = c; bestLen = k.length; }
+  return best;
+}
+/* פירוק טקסט חופשי: "3 עגבניות", "חלב x2", "ביצים 2" */
+function parseEntry(raw){
+  let s = norm(raw), qty = 1, m;
+  if((m = s.match(/^(\d{1,3})\s+(.+)$/))) { qty = +m[1]; s = m[2]; }
+  else if((m = s.match(/^(.+?)\s*[x×*]\s*(\d{1,3})$/i))) { s = m[1]; qty = +m[2]; }
+  else if((m = s.match(/^(.+?)\s+(\d{1,3})$/))) { s = m[1]; qty = +m[2]; }
+  return {name: norm(s), qty: Math.max(1, Math.min(qty, 99))};
+}
+
+/* ===== ניווט בין מסכים ===== */
+function show(id){
+  const was = document.querySelector('.view.active');
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
+  if(!was || was.id !== id) window.scrollTo({top:0});
+}
+async function route(){
+  if(!TOKEN){ show('view-welcome'); hideFinish(); return; }
+  try{
+    if(!HOME) HOME = await api('/api/home');
+    if(OPEN){
+      try{ LIST = await api('/api/lists/' + OPEN); }
+      catch(e){ if(e.status === 403 || e.status === 404){ setOpen(null); LIST = null; return route(); } throw e; }
+      show('view-list'); renderList(); return;
+    }
+    LIST = null; HOME = await api('/api/home');
+    show('view-home'); renderHome(); hideFinish();
+  }catch(e){ if(TOKEN) toast(e.message); }
+}
+
+/* ===== כניסה והרשמה ===== */
+let authMode = 'login';
+document.querySelectorAll('#auth-seg [data-mode]').forEach(b => b.onclick = () => {
+  authMode = b.dataset.mode;
+  document.querySelectorAll('#auth-seg [data-mode]').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.getElementById('auth-title').textContent = authMode === 'login' ? 'כניסה' : 'משתמש חדש';
+  document.getElementById('auth-btn-txt').textContent = authMode === 'login' ? 'כניסה' : 'יצירת משתמש';
+  document.getElementById('user-pass').autocomplete = authMode === 'login' ? 'current-password' : 'new-password';
+  const signup = authMode === 'signup', nm = document.getElementById('user-name');
+  document.getElementById('email-row').hidden = !signup;
+  document.getElementById('user-name-lbl').textContent = signup ? 'שם משתמש' : 'שם משתמש או מייל';
+  nm.placeholder = signup ? 'למשל: רועי' : 'רועי או roy@gmail.com'; nm.maxLength = signup ? 18 : 120;
+  document.getElementById('user-err').textContent = '';
+});
+onSubmit('form-user', async () => {
+  const err = document.getElementById('user-err'), btn = document.querySelector('#form-user [data-submit]');
+  const username = norm(document.getElementById('user-name').value), password = document.getElementById('user-pass').value;
+  const email = norm(document.getElementById('user-email').value);
+  if(username.length < 2){ err.textContent = authMode === 'login' ? 'כתוב שם משתמש או מייל' : 'צריך שם משתמש (לפחות 2 תווים)'; return; }
+  if(authMode === 'signup' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent = 'כתובת המייל לא נראית תקינה'; return; }
+  if(password.length < 4){ err.textContent = 'הסיסמה צריכה להיות לפחות 4 תווים'; return; }
+  btn.disabled = true; err.textContent = '';
+  try{
+    const r = await api(authMode === 'login' ? '/api/login' : '/api/signup', {username, password, email});
+    setToken(r.token); setOpen(null); document.getElementById('user-pass').value = '';
+    await route();
+  }catch(e){ err.textContent = e.message; }
+  btn.disabled = false;
+});
+
+/* אווטר: תמונה אם יש, אחרת האות הראשונה על הצבע */
+function avatarHTML(u, extra=''){
+  const title = `title="${esc(u.name)}"`;
+  return u.photo
+    ? `<span class="avatar ${extra}" ${title} style="background:url('${u.photo}') center/cover;background-color:${u.color}"></span>`
+    : `<span class="avatar ${extra}" ${title} style="background:${u.color}">${esc(initials(u.name))}</span>`;
+}
+
+document.getElementById('me-pill').onclick = openSettings;
+document.getElementById('btn-home').onclick = () => { setOpen(null); route(); };
+function openList(id){ setOpen(id); route(); }
+
+/* שם הרשימה נשמר תוך כדי הקלדה */
+let nameT;
+document.getElementById('list-name').addEventListener('input', e => {
+  if(!LIST) return; LIST.name = norm(e.target.value);
+  clearTimeout(nameT); const id = LIST.id, name = LIST.name;
+  nameT = setTimeout(() => api(`/api/lists/${id}/name`, {name}).catch(er => toast(er.message)), 500);
+});
+document.getElementById('list-name').addEventListener('keydown', e => { if(e.key === 'Enter') e.target.blur(); });
+
+/* ===== מסך הבית ===== */
+function renderHome(){
+  const u = HOME.me, lists = HOME.lists;
+  const hr = new Date().getHours();
+  const hi = hr < 5 ? 'לילה טוב' : hr < 12 ? 'בוקר טוב' : hr < 17 ? 'צהריים טובים' : hr < 21 ? 'ערב טוב' : 'לילה טוב';
+  document.getElementById('me-pill').innerHTML = `${esc(u.name)}${avatarHTML(u)}`;
+  document.getElementById('h-title').textContent = `${hi}, ${u.name}`;
+  const total = lists.reduce((s,g) => s + g.count, 0);
+  document.getElementById('h-sub').textContent = total ? `יש ${total} מוצרים שמחכים לקנייה.` : 'הרשימות ריקות — הזמן להתחיל לכתוב.';
+  document.getElementById('home-lists').innerHTML = lists.map((g,i) => {
+    const others = g.members.filter(m => m.id !== u.id);
+    const preview = g.preview.map(x => `<li>${esc(x.name)}${x.qty>1?` <b>×${x.qty}</b>`:''}</li>`).join('');
+    const more = g.count > 4 ? `<li class="more">ועוד ${g.count-4}...</li>` : '';
+    return `<article class="mini ${i===0?'main':''}">
+      <div class="mini-top"><div><h3>${esc(listName(g))}</h3>
+        <small>${others.length ? 'משותפת עם '+others.map(o=>esc(o.name)).join(', ') : 'רק שלך'}</small></div>
+        <span class="mini-side"><span class="avatars">${g.members.slice(0,4).map(m=>avatarHTML(m)).join('')}</span>
+        <button class="mini-del" data-del="${g.id}" aria-label="מחיקת ${esc(listName(g))}"><svg class="i"><use href="#i-trash"/></svg></button></span></div>
+      ${g.count ? `<ul class="mini-items">${preview}${more}</ul>` : `<p class="mini-empty">עדיין ריקה</p>`}
+      <button class="btn ${i===0?'btn-primary':'btn-ghost'} btn-block" data-open="${g.id}">${i===0?'לרשימה':'פתיחה'}<span class="cnt">${g.count}</span><svg class="i" style="transform:scaleX(-1)"><use href="#i-back"/></svg></button>
+    </article>`;
+  }).join('');
+}
+document.getElementById('home-lists').addEventListener('click', e => {
+  const d = e.target.closest('[data-del]'); if(d) return askDelete(HOME.lists.find(l => l.id === d.dataset.del));
+  const b = e.target.closest('[data-open]'); if(b) openList(b.dataset.open);
+});
+
+/* ===== רשימה נוספת: יצירה או הצטרפות עם קוד ===== */
+document.getElementById('btn-add-list').onclick = () => openSheet(`
+  <h3 id="sheet-title">רשימה נוספת</h3><p>למשל לדירה, לעבודה או לטיול עם החברים.</p>
+  <div class="seg" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="new">יצירת רשימה</button>
+    <button role="tab" aria-selected="false" data-tab="join">הצטרפות עם קוד</button>
+  </div>
+  <div class="stack" id="tab-new">
+    <label class="lbl" for="n-name">שם הרשימה</label>
+    <input class="field" id="n-name" maxlength="26" placeholder="למשל: הדירה בתל אביב">
+    <p class="err" id="n-err" role="alert"></p>
+    <button type="button" class="btn btn-primary btn-block" data-submit>יצירה</button>
+  </div>
+  <div class="stack" id="tab-join" hidden>
+    <label class="lbl" for="j-code">הקוד שקיבלת</label>
+    <input class="field" id="j-code" maxlength="6" dir="ltr" style="text-align:center;letter-spacing:8px;font-size:1.3rem;font-weight:700;text-transform:uppercase" placeholder="ABC123" autocapitalize="characters">
+    <p class="err" id="j-err" role="alert"></p>
+    <button type="button" class="btn btn-primary btn-block" data-submit>הצטרפות</button>
+  </div>`, () => {
+  const tabs = document.querySelectorAll('.seg [data-tab]');
+  tabs.forEach(t => t.onclick = () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', x === t));
+    document.getElementById('tab-new').hidden = t.dataset.tab !== 'new';
+    document.getElementById('tab-join').hidden = t.dataset.tab !== 'join';
+    document.getElementById(t.dataset.tab === 'new' ? 'n-name' : 'j-code').focus();
+  });
+  document.getElementById('n-name').focus();
+  onSubmit('tab-new', async () => {
+    try{ const r = await api('/api/lists', {name: norm(document.getElementById('n-name').value)}); closeSheet(); openList(r.id); toast('הרשימה נוצרה'); }
+    catch(e){ document.getElementById('n-err').textContent = e.message; }
+  });
+  onSubmit('tab-join', async () => {
+    try{ const r = await api('/api/lists/join', {code: document.getElementById('j-code').value}); closeSheet(); openList(r.id); toast(`הצטרפת לרשימה של ${r.owner}`); }
+    catch(e){ document.getElementById('j-err').textContent = e.message; }
+  });
+});
+
+/* ===== מסך הרשימה ===== */
+async function addItems(raw){
+  if(!LIST) return;
+  const parts = raw.split(/[,،\n]+/).map(s=>s.trim()).filter(Boolean);
+  const items = parts.map(parseEntry).filter(x => x.name).map(x => ({...x, cat: categorize(x.name)}));
+  if(!items.length) return;
+  // מציגים מיד, ושומרים בשרת ברקע
+  items.forEach(x => {
+    const ex = LIST.items.find(y => y.name === x.name);
+    if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
+    else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false});
+  });
+  renderList();
+  toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" נוסף לרשימה`);
+  sync(api(`/api/lists/${LIST.id}/items`, {items}));
+}
+/* מקבלים מהשרת את המצב העדכני ומציירים מחדש */
+async function sync(p){
+  try{ const r = await p; if(LIST && r && r.id === LIST.id){ LIST = r; renderList(); } }
+  catch(e){ toast(e.message); refreshList(); }
+}
+async function refreshList(){
+  if(!LIST || document.hidden) return;
+  try{
+    const r = await api('/api/lists/' + LIST.id);
+    if(LIST && r.id === LIST.id && JSON.stringify(r) !== JSON.stringify(LIST)){ LIST = r; renderList(); }
+  }catch(e){ if(e.status === 403){ setOpen(null); toast('הרשימה כבר לא קיימת'); route(); } }
+}
+/* בדיקה כל כמה שניות אם מישהו אחר הוסיף משהו */
+setInterval(() => { if(OPEN && LIST) refreshList(); else if(HOME && !OPEN && !document.hidden) api('/api/home').then(h => { HOME = h; if(!OPEN) renderHome(); }).catch(()=>{}); }, 4000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden && OPEN) refreshList(); });
+
+function renderList(){
+  const g = LIST; if(!g) return;
+  const ln = document.getElementById('list-name');
+  if(document.activeElement !== ln) ln.value = g.name || '';
+  const items = g.items, miss = items.filter(x=>x.miss);
+  const others = g.members.filter(m => m.id !== meId()).map(m => m.name);
+  document.getElementById('l-sub').textContent = (others.length ? `משותפת עם ${others.slice(0,3).join(', ')}${others.length>3?' ועוד':''}` : 'רק שלך · לחץ על האנשים כדי לשתף')
+    + (items.length ? ` · ${items.length} מוצרים` : '');
+
+  const body = document.getElementById('list-body');
+  if(!items.length){
+    body.innerHTML = `<div class="card empty"><div class="big"><svg class="i"><use href="#i-cart"/></svg></div>
+      <h3 style="color:var(--text);margin-bottom:6px">הרשימה ריקה</h3><p>כתוב למעלה מה צריך — המוצרים יסתדרו לבד לפי מחלקות.</p></div>`;
+    hideFinish(); return;
+  }
+  const seen = new Set([...body.querySelectorAll('.cat.seen')].map(el => el.dataset.cat));
+  const groups = {};
+  items.forEach(x => (groups[x.cat] ||= []).push(x));
+  body.innerHTML = CAT_ORDER.filter(c=>groups[c]).map(c => `
+    <section class="cat ${seen.has(c)?'seen':''}" data-cat="${c}" aria-label="${CATS[c].name}">
+      <div class="cat-head"><span class="cat-dot" style="background:${CATS[c].color}"><svg class="i"><use href="#c-${c}"/></svg></span>
+        <h3>${CATS[c].name}</h3><span class="count">${groups[c].length}</span></div>
+      <ul class="items">${groups[c].map(itemHTML).join('')}</ul>
+    </section>`).join('');
+  const io = new IntersectionObserver(es => es.forEach(en => { if(en.isIntersecting){ en.target.classList.add('seen'); io.unobserve(en.target); } }), {threshold:.08});
+  body.querySelectorAll('.cat:not(.seen)').forEach(el => io.observe(el));
+
+  const bought = items.length - miss.length;
+  document.getElementById('finish-hint').textContent = miss.length ? `${miss.length} לא נקנו — יישארו ברשימה` : 'סמן רק מה שלא הצלחת לקנות';
+  document.getElementById('finish-txt').textContent = `סיימתי קנייה · ${bought} נקנו`;
+  document.getElementById('finish').classList.add('show');
+}
+function itemHTML(x){
+  const u = userOf(x.by);
+  return `<li class="item ${x.miss?'miss':''}" data-id="${x.id}" style="animation:none">
+    <button class="check" data-act="toggle" aria-pressed="${!!x.miss}" aria-label="${x.miss?'ביטול סימון':'סימון שלא נקנה'}: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
+    <button class="name" data-act="toggle" tabindex="-1"><span>${esc(x.name)}</span><small>${x.miss ? 'לא נקנה, יישאר לפעם הבאה' : 'הוסיף/ה '+esc(u.name)}</small></button>
+    ${x.qty > 1 ? `<span class="qbadge" aria-label="כמות ${x.qty}">×${x.qty}</span>` : ''}
+    ${avatarHTML(u)}
+    <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
+  </li>`;
+}
+function hideFinish(){ document.getElementById('finish').classList.remove('show'); }
+
+/* פעולות על פריטים: לחיצה מסמנת "לא נקנה", איקס מוחק */
+document.getElementById('list-body').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b || !LIST) return;
+  const li = b.closest('[data-id]'), x = LIST.items.find(i => i.id === li.dataset.id); if(!x) return;
+  if(x.id.startsWith('t')) return; // עוד לא נשמר בשרת
+  if(b.dataset.act === 'toggle'){
+    x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
+    sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
+  }
+  if(b.dataset.act === 'del'){
+    LIST.items = LIST.items.filter(i => i !== x); renderList();
+    const lid = LIST.id;
+    sync(api(`/api/items/${x.id}/delete`, {}));
+    toast(`"${x.name}" נמחק`, () => sync(api(`/api/lists/${lid}/restore`, {items:[x]})));
+  }
+});
+
+/* סיום קנייה: כל מה שלא סומן נחשב נקנה ונמחק; מה שסומן נשאר והסימון מתאפס */
+document.getElementById('btn-finish').onclick = () => {
+  if(!LIST) return;
+  const before = LIST.items.map(x => ({...x})), lid = LIST.id;
+  const bought = LIST.items.filter(x=>!x.miss).length, left = LIST.items.filter(x=>x.miss);
+  left.forEach(x => x.miss = false); LIST.items = left; renderList();
+  sync(api(`/api/lists/${lid}/finish`, {}));
+  toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',
+    () => sync(api(`/api/lists/${lid}/restore`, {replace: before})));
+};
+
+/* ===== הוספה: כותבים, Enter, וזה נכנס לרשימה ===== */
+const addInput = document.getElementById('add-input');
+onSubmit('form-add', () => {
+  if(addInput.value.trim()) addItems(addInput.value);
+  addInput.value = ''; addInput.focus();
+});
+
+/* ===== שיתוף הרשימה ===== */
+document.getElementById('btn-invite').onclick = () => {
+  const g = LIST; if(!g) return;
+  const shared = g.members.length > 1;
+  openSheet(`<h3 id="sheet-title">שיתוף הרשימה</h3>
+    <p>שלח את הקוד לבני הבית — מי שמצטרף רואה ומוסיף לאותה רשימה, מכל טלפון.</p>
+    <div class="code" aria-label="קוד הצטרפות ${g.code.split('').join(' ')}">${g.code.split('').map(c=>`<span>${c}</span>`).join('')}</div>
+    <button class="btn btn-primary btn-block" id="b-share"><svg class="i"><use href="#i-share"/></svg>שליחת הזמנה</button>
+    <div class="members" style="margin-top:20px">${g.members.map(u => `<div class="member">${avatarHTML(u)}${esc(u.name)}${u.id===meId()?'<small>זה אתה</small>':''}</div>`).join('')}</div>
+    ${shared ? '<button class="linkbtn" id="b-leave" style="margin-top:6px">יציאה מהרשימה המשותפת</button>' : ''}`, () => {
+    document.getElementById('b-share').onclick = async () => {
+      const text = `בוא נעשה רשימת קניות משותפת ב-Grocery List: ${location.origin}/\nנרשמים, לוחצים "רשימה נוספת" ← "הצטרפות עם קוד" ומקלידים: ${g.code}`;
+      try{ if(navigator.share){ await navigator.share({title:'Grocery List — רשימת קניות', text}); } else { await navigator.clipboard.writeText(text); toast('ההזמנה הועתקה'); } }catch(e){}
+    };
+    const lv = document.getElementById('b-leave');
+    if(lv) lv.onclick = async () => {
+      try{ await api(`/api/lists/${g.id}/leave`, {}); closeSheet(); setOpen(null); route(); toast('יצאת מהרשימה המשותפת'); }
+      catch(e){ toast(e.message); }
+    };
+  });
+};
+
+/* ===== איפוס הרשימה (בתוך הרשימה) ===== */
+document.getElementById('btn-reset').onclick = () => {
+  const g = LIST; if(!g) return;
+  if(!g.items.length){ toast('הרשימה כבר ריקה'); return; }
+  openSheet(`<h3 id="sheet-title">איפוס הרשימה</h3><p>כל ${g.items.length} המוצרים יימחקו והרשימה תתחיל מחדש.</p>
+    <div class="stack">
+      <button type="button" class="btn btn-primary btn-block" id="r-ok"><svg class="i"><use href="#i-repeat"/></svg>איפוס</button>
+      <button type="button" class="btn btn-block" id="r-cancel">ביטול</button>
+    </div>`, () => {
+    document.getElementById('r-cancel').onclick = closeSheet;
+    document.getElementById('r-ok').onclick = () => {
+      const before = g.items.map(x => ({...x})), lid = g.id;
+      g.items = []; closeSheet(); renderList();
+      sync(api(`/api/lists/${lid}/reset`, {}));
+      toast('הרשימה אופסה', () => sync(api(`/api/lists/${lid}/restore`, {replace: before})));
+    };
+  });
+};
+
+/* ===== מחיקת רשימה (מכפתור הפח שעל הרשימה במסך הבית) ===== */
+function askDelete(g){
+  if(!g) return;
+  const shared = g.members.length > 1;
+  openSheet(`<h3 id="sheet-title">מחיקת "${esc(listName(g))}"</h3>
+    <p>${shared ? 'הרשימה משותפת — היא תימחק גם אצל כל המשתתפים.' : 'הרשימה וכל המוצרים שבה יימחקו.'}</p>
+    <div class="stack">
+      <button type="button" class="btn btn-ghost btn-block danger" id="d-del"><svg class="i"><use href="#i-trash"/></svg>מחיקת הרשימה</button>
+      <button type="button" class="btn btn-block" id="d-cancel">ביטול</button>
+    </div>`, () => {
+    document.getElementById('d-cancel').onclick = closeSheet;
+    document.getElementById('d-del').onclick = async () => {
+      try{ await api(`/api/lists/${g.id}/delete`, {}); closeSheet(); if(OPEN === g.id) setOpen(null); await route(); toast('הרשימה נמחקה'); }
+      catch(e){ toast(e.message); }
+    };
+  });
+}
+
+/* ===== הגדרות משתמש: תמונה, שם, צבע, סיסמה ===== */
+function openSettings(){
+  const u = HOME.me; let draft = {photo:u.photo||null, color:u.color}, photoChanged = false;
+  openSheet(`<h3 id="sheet-title">הפרופיל שלי</h3><p>כך בני הבית יראו אותך ברשימה.</p>
+    <div class="stack">
+      <div class="set-photo">
+        <span id="s-av"></span>
+        <div class="acts">
+          <label class="btn btn-ghost" style="min-height:44px" for="s-file"><svg class="i"><use href="#i-camera"/></svg>העלאת תמונה</label>
+          <input type="file" id="s-file" accept="image/*" class="sr-only">
+          <button type="button" class="linkbtn" id="s-rm">הסרת תמונה</button>
+        </div>
+      </div>
+      <div><label class="lbl" for="s-name">שם משתמש</label><input class="field" id="s-name" maxlength="18" value="${esc(u.name)}"></div>
+      <div><label class="lbl" for="s-mail">מייל</label><input class="field" id="s-mail" type="email" dir="ltr" maxlength="120" value="${esc(u.email||'')}"></div>
+      <div><span class="lbl" id="s-col-lbl">צבע</span><div class="colors" role="radiogroup" aria-labelledby="s-col-lbl" id="s-colors"></div></div>
+      <div class="divider"></div>
+      <div><label class="lbl" for="s-old">שינוי סיסמה</label>
+        <div class="stack" style="gap:8px"><input class="field" id="s-old" type="password" placeholder="סיסמה נוכחית" autocomplete="current-password">
+        <input class="field" id="s-new" type="password" placeholder="סיסמה חדשה (לפחות 4 תווים)" autocomplete="new-password"></div></div>
+      <p class="err" id="s-err" role="alert"></p>
+      <button type="button" class="btn btn-primary btn-block" id="s-save">שמירה</button>
+      <button type="button" class="btn btn-ghost btn-block" id="s-out"><svg class="i"><use href="#i-logout"/></svg>התנתקות</button>
+    </div>`, () => {
+    const paint = () => {
+      document.getElementById('s-av').innerHTML = avatarHTML({...u, ...draft, name:document.getElementById('s-name').value || u.name});
+      document.getElementById('s-colors').innerHTML = COLORS.map((c,i) =>
+        `<button type="button" class="color-opt" role="radio" aria-checked="${c===draft.color}" aria-label="צבע ${i+1}" style="background:${c}" data-c="${c}"></button>`).join('');
+      document.getElementById('s-rm').hidden = !draft.photo;
+    };
+    paint();
+    document.getElementById('s-name').addEventListener('input', paint);
+    document.getElementById('s-colors').onclick = e => { const b = e.target.closest('[data-c]'); if(b){ draft.color = b.dataset.c; paint(); } };
+    document.getElementById('s-rm').onclick = () => { draft.photo = null; photoChanged = true; paint(); };
+    // תמונה: מוקטנת ל-160 פיקסלים וחתוכה לריבוע כדי לא להכביד
+    document.getElementById('s-file').onchange = e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = () => { const img = new Image(); img.onload = () => {
+        const s = 160, c = document.createElement('canvas'); c.width = c.height = s;
+        const m = Math.min(img.width, img.height);
+        c.getContext('2d').drawImage(img, (img.width-m)/2, (img.height-m)/2, m, m, 0, 0, s, s);
+        draft.photo = c.toDataURL('image/jpeg', .82); photoChanged = true; paint();
+      }; img.src = r.result; };
+      r.readAsDataURL(f);
+    };
+    document.getElementById('s-save').onclick = async () => {
+      const err = document.getElementById('s-err');
+      const body = {name: norm(document.getElementById('s-name').value), email: norm(document.getElementById('s-mail').value), color: draft.color};
+      if(photoChanged) body.photo = draft.photo;
+      const oldP = document.getElementById('s-old').value, newP = document.getElementById('s-new').value;
+      if(oldP || newP){ body.oldPass = oldP; body.newPass = newP; if(newP.length < 4){ err.textContent = 'הסיסמה החדשה צריכה להיות לפחות 4 תווים'; return; } }
+      try{ HOME = await api('/api/profile', body); closeSheet(); await route(); toast('הפרופיל עודכן'); }
+      catch(e){ err.textContent = e.message; }
+    };
+    document.getElementById('s-out').onclick = () => { api('/api/logout', {}).catch(()=>{}); setToken(null); closeSheet(); document.querySelector('#auth-seg [data-mode=login]').click(); route(); };
+  });
+}
+
+/* ===== חלון תחתון ===== */
+const sheet = document.getElementById('sheet'), sheetBg = document.getElementById('sheet-bg');
+let lastFocus = null;
+function openSheet(html, after){
+  lastFocus = document.activeElement;
+  document.getElementById('sheet-body').innerHTML = html;
+  sheet.classList.add('open'); sheetBg.classList.add('open');
+  setTimeout(() => after && after(), 60);
+}
+function closeSheet(){ sheet.classList.remove('open'); sheetBg.classList.remove('open'); lastFocus && lastFocus.focus && lastFocus.focus(); }
+sheetBg.onclick = closeSheet;
+document.addEventListener('keydown', e => { if(e.key==='Escape' && sheet.classList.contains('open')) closeSheet(); });
+
+/* ===== הודעה קופצת עם ביטול ===== */
+let toastT;
+function toast(msg, undo){
+  const t = document.getElementById('toast'), b = document.getElementById('toast-btn');
+  document.getElementById('toast-txt').textContent = msg;
+  b.hidden = !undo; b.onclick = () => { undo(); t.classList.remove('show'); };
+  t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), undo ? 4200 : 2400);
+}
+
+route();
+</script>
+</body>
+</html>
