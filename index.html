@@ -112,6 +112,10 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke
   --ink:#2a2e3b;--muted:#6f6a59;--accent:#334061;--accent-ink:#eee2cb;--line-strong:rgba(42,46,59,.26);--accent-soft:rgba(51,64,97,.10)}
 .mini:hover{transform:translateY(-3px)}
 .mini-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.mini-side{display:flex;align-items:center;gap:8px}
+.mini-del{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#8a8473;transition:color .2s,background .2s}
+.mini-del:hover{color:var(--miss);background:var(--miss-soft)}
+.mini-del svg{width:18px;height:18px}
 .mini h3{font-size:1.25rem;font-weight:700}
 .mini.main h3{font-size:1.5rem}
 .mini small{color:var(--muted);font-size:.85rem}
@@ -379,7 +383,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
       <button class="icon-btn" id="btn-home" aria-label="חזרה למסך הבית"><svg class="i"><use href="#i-back"/></svg></button>
       <span style="flex:1"></span>
       <button class="icon-btn" id="btn-invite" aria-label="שיתוף הרשימה עם בני הבית"><svg class="i"><use href="#i-users"/></svg></button>
-      <button class="icon-btn" id="btn-del-list" aria-label="מחיקת הרשימה"><svg class="i"><use href="#i-trash"/></svg></button>
+      <button class="icon-btn" id="btn-reset" aria-label="איפוס הרשימה"><svg class="i"><use href="#i-repeat"/></svg></button>
     </div>
     <div class="list-head">
       <div class="title">
@@ -573,13 +577,15 @@ function renderHome(){
     return `<article class="mini ${i===0?'main':''}">
       <div class="mini-top"><div><h3>${esc(listName(g))}</h3>
         <small>${others.length ? 'משותפת עם '+others.map(o=>esc(o.name)).join(', ') : 'רק שלך'}</small></div>
-        <span class="avatars">${g.members.slice(0,4).map(m=>avatarHTML(userOf(m))).join('')}</span></div>
+        <span class="mini-side"><span class="avatars">${g.members.slice(0,4).map(m=>avatarHTML(userOf(m))).join('')}</span>
+        <button class="mini-del" data-del="${g.id}" aria-label="מחיקת ${esc(listName(g))}"><svg class="i"><use href="#i-trash"/></svg></button></span></div>
       ${g.items.length ? `<ul class="mini-items">${preview}${more}</ul>` : `<p class="mini-empty">עדיין ריקה</p>`}
       <button class="btn ${i===0?'btn-primary':'btn-ghost'} btn-block" data-open="${g.id}">${i===0?'לרשימה':'פתיחה'}<span class="cnt">${g.items.length}</span><svg class="i" style="transform:scaleX(-1)"><use href="#i-back"/></svg></button>
     </article>`;
   }).join('');
 }
 document.getElementById('home-lists').addEventListener('click', e => {
+  const d = e.target.closest('[data-del]'); if(d) return askDelete(S.groups[d.dataset.del]);
   const b = e.target.closest('[data-open]'); if(b) openList(b.dataset.open);
 });
 
@@ -761,32 +767,42 @@ ${shared ? '<button class="linkbtn" id="b-leave" style="margin-top:6px">יציא
   });
 };
 
-/* ===== מחיקה: ניקוי כל המוצרים או מחיקת הרשימה כולה ===== */
-document.getElementById('btn-del-list').onclick = () => {
-  const g = group(), shared = g.members.length > 1;
-  openSheet(`<h3 id="sheet-title">מחיקה</h3><p>מה תרצה למחוק ב"${esc(listName(g))}"?</p>
+/* ===== איפוס הרשימה (בתוך הרשימה) ===== */
+document.getElementById('btn-reset').onclick = () => {
+  const g = group();
+  if(!g.items.length){ toast('הרשימה כבר ריקה'); return; }
+  openSheet(`<h3 id="sheet-title">איפוס הרשימה</h3><p>כל ${g.items.length} המוצרים יימחקו והרשימה תתחיל מחדש.</p>
     <div class="stack">
-      <button type="button" class="btn btn-ghost btn-block" id="d-clear" ${g.items.length?'':'disabled style="opacity:.45"'}>ניקוי כל המוצרים (${g.items.length})</button>
-      <button type="button" class="btn btn-ghost btn-block danger" id="d-del"><svg class="i"><use href="#i-trash"/></svg>מחיקת הרשימה לגמרי</button>
-      ${shared ? '<p style="margin:0;font-size:.88rem">הרשימה משותפת — מחיקה תמחק אותה גם אצל כל המשתתפים.</p>' : ''}
+      <button type="button" class="btn btn-primary btn-block" id="r-ok"><svg class="i"><use href="#i-repeat"/></svg>איפוס</button>
+      <button type="button" class="btn btn-block" id="r-cancel">ביטול</button>
+    </div>`, () => {
+    document.getElementById('r-cancel').onclick = closeSheet;
+    document.getElementById('r-ok').onclick = () => {
+      const before = g.items; g.items = []; g.updated = Date.now(); save(); closeSheet(); renderList();
+      toast('הרשימה אופסה', () => { g.items = before; save(); renderList(); });
+    };
+  });
+};
+
+/* ===== מחיקת רשימה (מכפתור הפח שעל הרשימה במסך הבית) ===== */
+function askDelete(g){
+  if(!g) return;
+  const shared = g.members.length > 1;
+  openSheet(`<h3 id="sheet-title">מחיקת "${esc(listName(g))}"</h3>
+    <p>${shared ? 'הרשימה משותפת — היא תימחק גם אצל כל המשתתפים.' : 'הרשימה וכל המוצרים שבה יימחקו.'}</p>
+    <div class="stack">
+      <button type="button" class="btn btn-ghost btn-block danger" id="d-del"><svg class="i"><use href="#i-trash"/></svg>מחיקת הרשימה</button>
       <button type="button" class="btn btn-block" id="d-cancel">ביטול</button>
     </div>`, () => {
     document.getElementById('d-cancel').onclick = closeSheet;
-    document.getElementById('d-clear').onclick = () => {
-      const before = g.items; g.items = []; g.updated = Date.now(); save(); closeSheet(); renderList();
-      toast('הרשימה נוקתה', () => { g.items = before; save(); renderList(); });
-    };
-    const del = document.getElementById('d-del');
-    del.onclick = () => {
-      // לחיצה ראשונה מבקשת אישור, שנייה מוחקת
-      if(!del.dataset.sure){ del.dataset.sure = 1; del.lastChild.textContent = 'בטוח? לחץ שוב למחיקה'; return; }
+    document.getElementById('d-del').onclick = () => {
       const copy = S.groups[g.id], before = new Set(Object.keys(S.groups));
-      delete S.groups[g.id]; S.open = null; save(); closeSheet(); route();
+      delete S.groups[g.id]; if(S.open === g.id) S.open = null; save(); closeSheet(); route();
       const autoMade = Object.keys(S.groups).filter(k => !before.has(k)); // רשימה ריקה שנוצרה אוטומטית
       toast('הרשימה נמחקה', () => { autoMade.forEach(k => { if(!S.groups[k].items.length) delete S.groups[k]; }); S.groups[copy.id] = copy; save(); route(); });
     };
   });
-};
+}
 
 /* ===== הגדרות משתמש: תמונה, שם, צבע, סיסמה ===== */
 function openSettings(){
