@@ -242,9 +242,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .check svg{width:15px;height:15px;stroke-width:3;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
 .item .name{flex:1;min-width:0;font-weight:500;font-size:1.08rem;text-align:right;display:flex;flex-direction:column;line-height:1.3}
 .item .name small{font-weight:400;color:var(--muted);font-size:.8rem}
-.qbadge{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;width:46px;height:44px;border-radius:12px;border:1.5px solid rgba(51,64,97,.3);background:rgba(255,255,255,.5);color:var(--accent);line-height:1;transition:all .2s var(--ease)}
-.qbadge b{font-family:var(--font-head);font-size:1.25rem;font-weight:700}
-.qbadge small{font-size:.66rem;font-weight:600;opacity:.75;margin-top:2px}
+.qbadge{display:grid;place-items:center;flex:none;min-width:40px;height:30px;padding:0 7px;border-radius:9px;border:1.5px solid rgba(51,64,97,.3);background:rgba(255,255,255,.55);color:var(--accent);font-family:var(--font-head);font-size:.98rem;font-weight:700;direction:ltr;line-height:1;transition:all .2s var(--ease)}
 .qbadge.more{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .qbadge:hover{transform:translateY(-1px);box-shadow:0 4px 10px -4px rgba(30,40,70,.5)}
 .item.miss .qbadge{opacity:.55}
@@ -282,8 +280,14 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .item.miss .name>span{text-decoration:none}
 .item.done .name,.item.done .qbadge{opacity:.6}
 #list-body{padding-bottom:110px}
-.item.done .name>span{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--accent)}
+.item.done .name>span:first-child{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--accent)}
 .qbadge.zero{border-style:dashed;color:var(--muted);background:transparent}
+.item .name .meta{display:flex;align-items:center;gap:8px;margin-top:3px}
+.item .name .meta small{font-size:.78rem;color:var(--muted)}
+.once-btn{white-space:nowrap;flex:none;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 9px;border-radius:999px;border:1.5px dashed rgba(51,64,97,.4);color:var(--accent);font-family:var(--font-head);font-size:.76rem;font-weight:600;transition:all .2s}
+.once-btn svg{width:11px;height:11px;stroke-width:3}
+.once-btn:hover{border-style:solid;background:var(--accent-soft)}
+.once-btn.on{background:#e8a33d;border:1.5px solid #e8a33d;color:#2a2e3b}
 .fixed-tag{font-style:normal;font-family:var(--font-head);font-size:.68rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 7px;vertical-align:middle;text-decoration:none;display:inline-block}
 /* מתג "מוצר קבוע" */
 .switch-row{display:flex;align-items:center;gap:14px;width:100%;text-align:right;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line-strong);margin-bottom:16px}
@@ -298,7 +302,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .howto .ic{width:26px;height:26px;border-radius:50%;background:var(--miss);color:#fff;display:grid;place-items:center;flex:none;margin-top:1px}
 .howto .ic svg{width:13px;height:13px;stroke-width:3}
 .howto b{color:var(--miss)}
-.item.miss .name>span{text-decoration:line-through;text-decoration-color:var(--miss);text-decoration-thickness:2px}
+.item .name .meta{text-decoration:none!important}
 .item.miss .name small{color:var(--miss);font-weight:600}
 
 /* כפתור סיום צף */
@@ -457,8 +461,8 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
         <input id="add-input" placeholder="מה צריך לקנות?" enterkeyhint="enter" autocomplete="off">
         <button class="btn btn-primary" type="button" data-submit aria-label="הוספה"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
-      <p class="tip">כותבים ולוחצים Enter. כמה מוצרים בבת אחת? מפרידים בפסיק — "חלב, 3 עגבניות, לחם". לשינוי כמות לוחצים על המספר ליד המוצר.</p>
     </div>
+    <p class="tip" style="margin-top:-4px;margin-bottom:10px">כותבים ולוחצים Enter. כמה מוצרים בבת אחת? מפרידים בפסיק — "חלב, 3 עגבניות, לחם". לשינוי כמות לוחצים על ×1 ליד המוצר.</p>
 
     <div id="list-body" aria-live="polite"></div>
   </section>
@@ -729,7 +733,7 @@ async function addItems(raw){
     const ex = LIST.items.find(y => y.name === x.name);
     if(ex && ex.done){ ex.done = false; ex.miss = false; ex.qty = x.qty; }
     else if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
-    else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: false, done: false});
+    else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: true, done: false});
   });
   renderList();
   toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" נוסף לרשימה`);
@@ -771,14 +775,14 @@ function renderList(){
   }
   let html = '';
   if(active.length) html += `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
-      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות — הוא יעבור לרשימה נפרדת. בסוף לוחצים "סיימתי קנייה" וכל השאר יימחק.</span></div>`;
+      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה": מה שנקנה יורד ל"נקנו" לפעם הבאה, ומה שסומן <b>"חד פעמי"</b> נמחק.</span></div>`;
   if(main.length) html += `<ul class="items flat">${main.map(x => itemHTML(x,'main')).join('')}</ul>`;
   else if(active.length) html += `<p class="sec-note">כל מה שנשאר סומן "לא נמצא".</p>`;
   else html += `<div class="card empty" style="margin-top:6px"><div class="big"><svg class="i"><use href="#i-check"/></svg></div>
-      <h3 style="color:var(--text);margin-bottom:6px">הכול נקנה</h3><p>המוצרים הקבועים מחכים למטה. כשצריך שוב — "החזרה לרשימה".</p></div>`;
+      <h3 style="color:var(--text);margin-bottom:6px">הכול נקנה</h3><p>המוצרים מחכים למטה ב"נקנו". כשצריך שוב — "החזרה לרשימה".</p></div>`;
   if(missing.length) html += `<h4 class="sec-title miss-title"><svg class="i"><use href="#i-x"/></svg>לא נמצאו <span>${missing.length}</span></h4>
       <ul class="items flat">${missing.map(x => itemHTML(x,'miss')).join('')}</ul>`;
-  if(done.length) html += `<h4 class="sec-title"><svg class="i"><use href="#i-pin"/></svg>קבועים שנקנו <span>${done.length}</span></h4>
+  if(done.length) html += `<h4 class="sec-title"><svg class="i"><use href="#i-check"/></svg>נקנו <span>${done.length}</span></h4>
       <ul class="items flat">${done.map(x => itemHTML(x,'done')).join('')}</ul>`;
   body.innerHTML = html;
 
@@ -791,18 +795,20 @@ function renderList(){
 }
 function itemHTML(x, mode){
   const u = userOf(x.by);
-  const sub = mode === 'done' ? 'נקנה · מוצר קבוע' : mode === 'miss' ? 'יישאר ברשימה לפעם הבאה' : 'הוסיף/ה ' + esc(u.name);
   const qty = mode === 'done'
-    ? `<span class="qbadge zero" aria-label="כמות 0"><b>0</b><small>יח׳</small></span>`
-    : `<button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי"><b>${x.qty}</b><small>יח׳</small></button>`;
+    ? `<span class="qbadge zero" aria-label="כמות 0">×0</span>`
+    : `<button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי">×${x.qty}</button>`;
+  const once = mode === 'done' ? `<small>נקנה</small>`
+    : `<button class="once-btn ${x.fixed ? '' : 'on'}" data-act="once" aria-pressed="${!x.fixed}" aria-label="${x.fixed ? 'סימון כחד פעמי' : 'ביטול חד פעמי'}: ${esc(x.name)}"><svg class="i"><use href="#${x.fixed ? 'i-plus' : 'i-check'}"/></svg>חד פעמי</button>
+`;
   const action = mode === 'main'
     ? `<button class="miss-btn" data-act="toggle" aria-label="סימון שלא נמצא: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>`
     : mode === 'miss'
     ? `<button class="back-btn" data-act="toggle" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>נמצא</button>`
     : `<button class="back-btn" data-act="back" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>החזרה לרשימה</button>`;
   return `<li class="item ${mode !== 'main' ? mode : ''}" data-id="${x.id}" style="animation:none">
-    <div class="name"><span>${esc(x.name)}${x.fixed && mode !== 'done' ? ' <em class="fixed-tag">קבוע</em>' : ''}</span><small>${sub}</small></div>
     ${qty}
+    <div class="name"><span>${esc(x.name)}</span><span class="meta">${once}</span></div>
     ${action}
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
@@ -818,6 +824,11 @@ document.getElementById('list-body').addEventListener('click', e => {
   if(b.dataset.act === 'toggle'){
     x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
     sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
+  }
+  if(b.dataset.act === 'once'){
+    x.fixed = !x.fixed; renderList();
+    toast(x.fixed ? `"${x.name}" יישאר ברשימה אחרי הקנייה` : `"${x.name}" חד פעמי — יימחק אחרי הקנייה`);
+    sync(api(`/api/items/${x.id}/fixed`, {fixed: x.fixed}));
   }
   if(b.dataset.act === 'back'){
     x.done = false; x.miss = false; renderList(); toast(`"${x.name}" חזר לרשימה`);
@@ -835,9 +846,9 @@ document.getElementById('list-body').addEventListener('click', e => {
 document.getElementById('btn-finish').onclick = () => {
   if(!LIST) return;
   const active = LIST.items.filter(x => !x.done), missing = active.filter(x=>x.miss);
-  const boughtList = active.filter(x => !x.miss), fixedN = boughtList.filter(x => x.fixed).length, bought = boughtList.length - fixedN;
+  const boughtList = active.filter(x => !x.miss), fixedN = boughtList.filter(x => x.fixed).length, onceN = boughtList.length - fixedN;
   openSheet(`<h3 id="sheet-title">לסיים את הקנייה?</h3>
-    <p>${bought ? (bought === 1 ? 'מוצר אחד נקנה וימחק מהרשימה.' : bought + ' מוצרים נקנו וימחקו מהרשימה.') : ''}${fixedN ? ` ${fixedN === 1 ? 'מוצר קבוע אחד יישאר' : fixedN + ' מוצרים קבועים יישארו'} למטה עם קו וכמות 0.` : ''}${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ''}</p>
+    <p>${fixedN ? (fixedN === 1 ? 'מוצר אחד יירד' : fixedN + ' מוצרים יירדו') + ' ל"נקנו" עם קו.' : ''}${onceN ? ` ${onceN === 1 ? 'מוצר חד פעמי אחד יימחק' : onceN + ' מוצרים חד פעמיים יימחקו'}.` : ''}${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ''}</p>
     <div class="stack">
       <button type="button" class="btn btn-primary btn-block" id="f-ok"><svg class="i"><use href="#i-check"/></svg>כן, סיימתי</button>
       <button type="button" class="btn btn-block" id="f-cancel">עוד לא, חזרה לרשימה</button>
@@ -862,7 +873,7 @@ function finishShopping(){
 /* ===== שינוי כמות למוצר ===== */
 function openQty(x){
   const MAX = 50, ROW = 44;
-  let q = x.qty, fixed = !!x.fixed;
+  let q = x.qty;
   openSheet(`<h3 id="sheet-title">${esc(x.name)}</h3><p>גללו ובחרו כמה יחידות צריך.</p>
     <div class="wheel">
       <div class="wheel-band"></div>
@@ -871,13 +882,7 @@ function openQty(x){
       </ul>
       <span class="wheel-unit">יח׳</span>
     </div>
-    <button type="button" class="switch-row" id="q-fixed" role="switch" aria-checked="${fixed}">
-      <span><b>מוצר קבוע</b><small>לא נמחק אחרי קנייה — נשאר עם קו וכמות 0 עד שמחזירים אותו</small></span>
-      <i class="switch"></i>
-    </button>
     <div class="stack"><button type="button" class="btn btn-primary btn-block" id="q-ok">שמירה</button></div>`, () => {
-    const fx = document.getElementById('q-fixed');
-    fx.onclick = () => { fixed = !fixed; fx.setAttribute('aria-checked', fixed); };
     const wheel = document.getElementById('q-wheel'), lis = [...wheel.children];
     const mark = () => lis.forEach((li,i) => { const on = i+1 === q; li.classList.toggle('on', on); li.setAttribute('aria-selected', on); });
     // מתחילים על הכמות הנוכחית
@@ -897,7 +902,6 @@ function openQty(x){
     document.getElementById('q-ok').onclick = () => {
       closeSheet();
       if(!LIST) return;
-      if(fixed !== !!x.fixed){ x.fixed = fixed; renderList(); sync(api(`/api/items/${x.id}/fixed`, {fixed})); toast(fixed ? `"${x.name}" מוגדר כמוצר קבוע` : `"${x.name}" כבר לא קבוע`); }
       if(q !== x.qty){ x.qty = q; renderList(); sync(api(`/api/items/${x.id}/qty`, {qty: q})); }
     };
   });

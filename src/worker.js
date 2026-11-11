@@ -154,7 +154,7 @@ export class GroceryDB extends DurableObject {
         else this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
       }
       else if (!ex) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, x.by ? +x.by : uid, x.miss ? 1 : 0, x.fixed ? 1 : 0, x.done ? 1 : 0, x.created ? +x.created : now + i);
+        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, x.by ? +x.by : uid, x.miss ? 1 : 0, (x.fixed === false || x.fixed === 0) ? 0 : 1, x.done ? 1 : 0, x.created ? +x.created : now + i);
     });
     this.touch(lid);
   }
