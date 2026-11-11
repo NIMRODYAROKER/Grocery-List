@@ -734,7 +734,7 @@ async function addItems(raw){
   items.forEach(x => {
     const ex = LIST.items.find(y => y.name === x.name);
     if(ex && ex.done) revived.push(x.name);
-    if(ex && ex.done){ ex.done = false; ex.miss = false; if(x.explicit) ex.qty = x.qty; }   // כמו "החזרה לרשימה": שומר על הכמות הקודמת
+    if(ex && ex.done){ ex.done = false; ex.miss = false; ex.qty = x.qty; }   // חוזר לרשימה עם כמות חדשה (1 אם לא נכתב מספר)
     else if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
     else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: true, done: false});
   });
@@ -777,8 +777,6 @@ function renderList(){
     hideFinish(); return;
   }
   let html = '';
-  if(active.length) html += `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
-      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" וכל מה שנקנה יירד למטה עם קו. כשצריך שוב — לוחצים "החזרה לרשימה" או פשוט כותבים אותו שוב.</span></div>`;
   if(main.length) html += `<ul class="items flat">${main.map(x => itemHTML(x,'main')).join('')}</ul>`;
   else if(active.length) html += `<p class="sec-note">כל מה שנשאר סומן "לא נמצא".</p>`;
   else html += `<div class="card empty" style="margin-top:6px"><div class="big"><svg class="i"><use href="#i-check"/></svg></div>
@@ -827,7 +825,7 @@ document.getElementById('list-body').addEventListener('click', e => {
     sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
   }
   if(b.dataset.act === 'back'){
-    x.done = false; x.miss = false; renderList(); toast(`"${x.name}" חזר לרשימה`);
+    x.done = false; x.miss = false; x.qty = 1; renderList(); toast(`"${x.name}" חזר לרשימה`);
     sync(api(`/api/items/${x.id}/back`, {}));
   }
   if(b.dataset.act === 'del'){
