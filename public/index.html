@@ -261,9 +261,9 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .item .avatar{width:24px;height:24px;font-size:.68rem;border-width:0}
 /* "לא נקנה" */
 .item.miss{background:var(--miss-soft)}
-.miss-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:32px;padding:0 10px;border-radius:999px;border:1.5px dashed rgba(210,88,62,.55);color:var(--miss);font-family:var(--font-head);font-weight:600;font-size:.85rem;transition:all .2s var(--ease)}
+.miss-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:32px;padding:0 11px;border-radius:999px;border:1.5px solid var(--miss);background:rgba(255,255,255,.45);color:var(--miss);font-family:var(--font-head);font-weight:600;font-size:.85rem;transition:all .2s var(--ease)}
 .miss-btn svg{width:13px;height:13px;stroke-width:3}
-.miss-btn:hover{background:var(--miss-soft);border-style:solid}
+.miss-btn:hover{background:var(--miss-soft)}
 .item.miss .miss-btn{background:var(--miss);border:1.5px solid var(--miss);color:#fff}
 /* שורה: רק הכפתורים לחיצים */
 .item .name{cursor:default}
@@ -580,11 +580,12 @@ function categorize(name){
 const catRank = x => CAT_ORDER.indexOf(x.cat && x.cat !== 'other' ? x.cat : categorize(x.name));
 /* פירוק טקסט חופשי: "3 עגבניות", "חלב x2", "ביצים 2" */
 function parseEntry(raw){
-  let s = norm(raw), qty = 1, m;
+  let s = norm(raw), qty = 1, m, explicit = true;
   if((m = s.match(/^(\d{1,3})\s+(.+)$/))) { qty = +m[1]; s = m[2]; }
   else if((m = s.match(/^(.+?)\s*[x×*]\s*(\d{1,3})$/i))) { s = m[1]; qty = +m[2]; }
   else if((m = s.match(/^(.+?)\s+(\d{1,3})$/))) { s = m[1]; qty = +m[2]; }
-  return {name: norm(s), qty: Math.max(1, Math.min(qty, 99))};
+  else explicit = false;   // לא נכתב מספר
+  return {name: norm(s), qty: Math.max(1, Math.min(qty, 99)), explicit};
 }
 
 /* ===== ניווט בין מסכים ===== */
@@ -729,14 +730,16 @@ async function addItems(raw){
   const items = parts.map(parseEntry).filter(x => x.name).map(x => ({...x, cat: categorize(x.name)}));
   if(!items.length) return;
   // מציגים מיד, ושומרים בשרת ברקע
+  const revived = [];
   items.forEach(x => {
     const ex = LIST.items.find(y => y.name === x.name);
-    if(ex && ex.done){ ex.done = false; ex.miss = false; ex.qty = x.qty; }
+    if(ex && ex.done) revived.push(x.name);
+    if(ex && ex.done){ ex.done = false; ex.miss = false; if(x.explicit) ex.qty = x.qty; }   // כמו "החזרה לרשימה": שומר על הכמות הקודמת
     else if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
     else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: true, done: false});
   });
   renderList();
-  toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" נוסף לרשימה`);
+  toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" ${revived.includes(items[0].name) ? 'חזר' : 'נוסף'} לרשימה`);
   sync(api(`/api/lists/${LIST.id}/items`, {items}));
 }
 /* מקבלים מהשרת את המצב העדכני ומציירים מחדש */
@@ -775,7 +778,7 @@ function renderList(){
   }
   let html = '';
   if(active.length) html += `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
-      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה": מה שנקנה יורד ל"נקנו" לפעם הבאה, ומה שסומן <b>"חד פעמי"</b> נמחק.</span></div>`;
+      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" וכל מה שנקנה יירד למטה עם קו. כשצריך שוב — לוחצים "החזרה לרשימה" או פשוט כותבים אותו שוב.</span></div>`;
   if(main.length) html += `<ul class="items flat">${main.map(x => itemHTML(x,'main')).join('')}</ul>`;
   else if(active.length) html += `<p class="sec-note">כל מה שנשאר סומן "לא נמצא".</p>`;
   else html += `<div class="card empty" style="margin-top:6px"><div class="big"><svg class="i"><use href="#i-check"/></svg></div>
@@ -798,9 +801,7 @@ function itemHTML(x, mode){
   const qty = mode === 'done'
     ? `<span class="qbadge zero" aria-label="כמות 0">×0</span>`
     : `<button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי">×${x.qty}</button>`;
-  const once = mode === 'done' ? `<small>נקנה</small>`
-    : `<button class="once-btn ${x.fixed ? '' : 'on'}" data-act="once" aria-pressed="${!x.fixed}" aria-label="${x.fixed ? 'סימון כחד פעמי' : 'ביטול חד פעמי'}: ${esc(x.name)}"><svg class="i"><use href="#${x.fixed ? 'i-plus' : 'i-check'}"/></svg>חד פעמי</button>
-`;
+  const once = mode === 'done' ? `<small>נקנה</small>` : '';
   const action = mode === 'main'
     ? `<button class="miss-btn" data-act="toggle" aria-label="סימון שלא נמצא: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>`
     : mode === 'miss'
@@ -808,7 +809,7 @@ function itemHTML(x, mode){
     : `<button class="back-btn" data-act="back" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>החזרה לרשימה</button>`;
   return `<li class="item ${mode !== 'main' ? mode : ''}" data-id="${x.id}" style="animation:none">
     ${qty}
-    <div class="name"><span>${esc(x.name)}</span><span class="meta">${once}</span></div>
+    <div class="name"><span>${esc(x.name)}</span>${once ? `<span class="meta">${once}</span>` : ''}</div>
     ${action}
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
@@ -824,11 +825,6 @@ document.getElementById('list-body').addEventListener('click', e => {
   if(b.dataset.act === 'toggle'){
     x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
     sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
-  }
-  if(b.dataset.act === 'once'){
-    x.fixed = !x.fixed; renderList();
-    toast(x.fixed ? `"${x.name}" יישאר ברשימה אחרי הקנייה` : `"${x.name}" חד פעמי — יימחק אחרי הקנייה`);
-    sync(api(`/api/items/${x.id}/fixed`, {fixed: x.fixed}));
   }
   if(b.dataset.act === 'back'){
     x.done = false; x.miss = false; renderList(); toast(`"${x.name}" חזר לרשימה`);
@@ -846,9 +842,9 @@ document.getElementById('list-body').addEventListener('click', e => {
 document.getElementById('btn-finish').onclick = () => {
   if(!LIST) return;
   const active = LIST.items.filter(x => !x.done), missing = active.filter(x=>x.miss);
-  const boughtList = active.filter(x => !x.miss), fixedN = boughtList.filter(x => x.fixed).length, onceN = boughtList.length - fixedN;
+  const boughtN = active.filter(x => !x.miss).length;
   openSheet(`<h3 id="sheet-title">לסיים את הקנייה?</h3>
-    <p>${fixedN ? (fixedN === 1 ? 'מוצר אחד יירד' : fixedN + ' מוצרים יירדו') + ' ל"נקנו" עם קו.' : ''}${onceN ? ` ${onceN === 1 ? 'מוצר חד פעמי אחד יימחק' : onceN + ' מוצרים חד פעמיים יימחקו'}.` : ''}${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ''}</p>
+    <p>${boughtN === 1 ? 'מוצר אחד יסומן' : boughtN + ' מוצרים יסומנו'} כ"נקנו" ויירדו למטה עם קו.${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ''}</p>
     <div class="stack">
       <button type="button" class="btn btn-primary btn-block" id="f-ok"><svg class="i"><use href="#i-check"/></svg>כן, סיימתי</button>
       <button type="button" class="btn btn-block" id="f-cancel">עוד לא, חזרה לרשימה</button>
@@ -862,8 +858,7 @@ function finishShopping(){
   const before = LIST.items.map(x => ({...x})), lid = LIST.id;
   const bought = LIST.items.filter(x => !x.miss && !x.done).length, left = LIST.items.filter(x => x.miss && !x.done);
   // רגילים שנקנו נמחקים, קבועים שנקנו נשארים עם קו, מה שלא נמצא חוזר לרשימה
-  LIST.items = LIST.items.filter(x => x.miss || x.fixed || x.done);
-  LIST.items.forEach(x => { if(!x.miss && x.fixed) x.done = true; x.miss = false; });
+  LIST.items.forEach(x => { if(!x.miss) x.done = true; x.miss = false; });
   renderList();
   sync(api(`/api/lists/${lid}/finish`, {}));
   toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',

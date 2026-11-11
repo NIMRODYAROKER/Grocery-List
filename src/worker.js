@@ -150,7 +150,7 @@ export class GroceryDB extends DurableObject {
       const ex = this.one('SELECT id, qty, done FROM items WHERE list_id = ? AND name = ?', lid, name);
       if (ex && !x.id) {
         // מוצר קבוע שכבר נקנה חוזר לרשימה; מוצר שכבר ברשימה מקבל עוד כמות
-        if (ex.done) this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = ? WHERE id = ?', qty, ex.id);
+        if (ex.done) this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = ? WHERE id = ?', x.explicit === false ? ex.qty : qty, ex.id);
         else this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
       }
       else if (!ex) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -266,9 +266,8 @@ export class GroceryDB extends DurableObject {
         const now = Date.now();
         for (const x of this.q('SELECT name, cat FROM items WHERE list_id = ? AND miss = 0 AND done = 0', lid))
           this.sql.exec('INSERT INTO history (list_id, name, cat, count, last) VALUES (?, ?, ?, 1, ?) ON CONFLICT(list_id, name) DO UPDATE SET count = count + 1, cat = excluded.cat, last = excluded.last', lid, x.name, x.cat, now);
-        // רגילים שנקנו נמחקים; קבועים שנקנו נשארים עם קו; מה שלא נמצא חוזר לרשימה
-        this.sql.exec('DELETE FROM items WHERE list_id = ? AND miss = 0 AND fixed = 0 AND done = 0', lid);
-        this.sql.exec('UPDATE items SET done = 1 WHERE list_id = ? AND miss = 0 AND fixed = 1', lid);
+        // כל מה שנקנה נשאר ברשימה עם קו (מחזירים בכפתור או כשכותבים אותו שוב); מה שלא נמצא נשאר לקנייה הבאה
+        this.sql.exec('UPDATE items SET done = 1 WHERE list_id = ? AND miss = 0', lid);
         this.sql.exec('UPDATE items SET miss = 0 WHERE list_id = ?', lid);
         this.touch(lid);
         return json(this.listFull(l));
