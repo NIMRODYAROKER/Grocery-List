@@ -267,6 +267,32 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .miss-btn svg{width:13px;height:13px;stroke-width:3}
 .miss-btn:hover{background:var(--miss-soft);border-style:solid}
 .item.miss .miss-btn{background:var(--miss);border:1.5px solid var(--miss);color:#fff}
+/* שורה: רק הכפתורים לחיצים */
+.item .name{cursor:default}
+.item:hover{transform:none}
+.back-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:32px;padding:0 10px;border-radius:999px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);font-family:var(--font-head);font-weight:600;font-size:.82rem;white-space:nowrap;transition:all .2s var(--ease)}
+.back-btn svg{width:14px;height:14px;stroke-width:2.5;transform:scaleX(-1)}
+.back-btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px -4px rgba(30,40,70,.5)}
+.sec-title{display:flex;align-items:center;gap:8px;margin:24px 2px 0;font-family:var(--font-head);font-size:1.05rem;font-weight:600;color:var(--accent)}
+.sec-title svg{width:18px;height:18px}
+.sec-title span{margin-inline-start:auto;font-size:.85rem;color:var(--muted);font-weight:500}
+.sec-title.miss-title{color:var(--miss)}
+.sec-note{color:var(--muted);margin:12px 4px 0;font-size:.95rem}
+.item.miss{background:var(--miss-soft)}
+.item.miss .name>span{text-decoration:none}
+.item.done .name,.item.done .qbadge{opacity:.6}
+#list-body{padding-bottom:110px}
+.item.done .name>span{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--accent)}
+.qbadge.zero{border-style:dashed;color:var(--muted);background:transparent}
+.fixed-tag{font-style:normal;font-family:var(--font-head);font-size:.68rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 7px;vertical-align:middle;text-decoration:none;display:inline-block}
+/* מתג "מוצר קבוע" */
+.switch-row{display:flex;align-items:center;gap:14px;width:100%;text-align:right;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line-strong);margin-bottom:16px}
+.switch-row span{flex:1;display:flex;flex-direction:column;gap:2px}
+.switch-row small{color:var(--muted);font-size:.82rem;line-height:1.35}
+.switch{width:48px;height:28px;border-radius:999px;background:rgba(42,46,59,.2);position:relative;flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
+.switch-row[aria-checked="true"] .switch{background:var(--accent)}
+.switch-row[aria-checked="true"] .switch::after{transform:translateX(-20px)}
 /* הסבר קצר מעל הרשימה */
 .howto{display:flex;gap:10px;align-items:flex-start;background:var(--miss-soft);border:1.5px solid rgba(210,88,62,.3);border-radius:12px;padding:10px 12px;margin:4px 0 6px;font-size:.92rem;line-height:1.45}
 .howto .ic{width:26px;height:26px;border-radius:50%;background:var(--miss);color:#fff;display:grid;place-items:center;flex:none;margin-top:1px}
@@ -342,6 +368,8 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
     <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
     <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1.5 1.5 0 0 0 1.5 1.1h9.3a1.5 1.5 0 0 0 1.4-1.1L22 7H6"/></symbol>
     <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4H6l4-4z"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M15 7H8a5 5 0 0 0 0 10h3"/><path d="M12 3l3 4-3 4" transform="translate(0 0)"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6"/></symbol>
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></symbol>
     <!-- אייקוני מחלקות -->
@@ -699,8 +727,9 @@ async function addItems(raw){
   // מציגים מיד, ושומרים בשרת ברקע
   items.forEach(x => {
     const ex = LIST.items.find(y => y.name === x.name);
-    if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
-    else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false});
+    if(ex && ex.done){ ex.done = false; ex.miss = false; ex.qty = x.qty; }
+    else if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
+    else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: false, done: false});
   });
   renderList();
   toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" נוסף לרשימה`);
@@ -726,33 +755,55 @@ function renderList(){
   const g = LIST; if(!g) return;
   const ln = document.getElementById('list-name');
   if(document.activeElement !== ln) ln.value = g.name || '';
-  const items = g.items, miss = items.filter(x=>x.miss);
+  const active = g.items.filter(x => !x.done);                 // מה שצריך לקנות
+  const main = active.filter(x => !x.miss).sort((a,b) => catRank(a) - catRank(b));
+  const missing = active.filter(x => x.miss);                   // סומנו "לא נמצא"
+  const done = g.items.filter(x => x.done);                     // קבועים שכבר נקנו
   const others = g.members.filter(m => m.id !== meId()).map(m => m.name);
   document.getElementById('l-sub').textContent = (others.length ? `משותפת עם ${others.slice(0,3).join(', ')}${others.length>3?' ועוד':''}` : 'רק שלך · לחץ על האנשים כדי לשתף')
-    + (items.length ? ` · ${items.length} מוצרים` : '');
+    + (active.length ? ` · ${active.length} מוצרים` : '');
 
   const body = document.getElementById('list-body');
-  if(!items.length){
+  if(!g.items.length){
     body.innerHTML = `<div class="card empty"><div class="big"><svg class="i"><use href="#i-cart"/></svg></div>
-      <h3 style="color:var(--text);margin-bottom:6px">הרשימה ריקה</h3><p>כתוב למעלה מה צריך — המוצרים יסתדרו לבד לפי מחלקות.</p></div>`;
+      <h3 style="color:var(--text);margin-bottom:6px">הרשימה ריקה</h3><p>כתוב למעלה מה צריך — המוצרים יסתדרו לבד לפי סדר הסופר.</p></div>`;
     hideFinish(); return;
   }
-  // רשימה אחת פשוטה, בלי חלוקה למחלקות
-  body.innerHTML = `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
-      <span>בסופר? לחצו <b>"לא נמצא"</b> על כל מוצר שלא הצלחתם לקנות. בסוף לוחצים "סיימתי קנייה" — מה שסומן יישאר ברשימה, וכל השאר יימחק.</span></div>
-    <ul class="items flat">${items.slice().sort((a,b) => catRank(a) - catRank(b)).map(itemHTML).join('')}</ul>`;
+  let html = '';
+  if(active.length) html += `<div class="howto"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>
+      <span>בסופר? לחצו <b>"לא נמצא"</b> על מה שלא הצלחתם לקנות — הוא יעבור לרשימה נפרדת. בסוף לוחצים "סיימתי קנייה" וכל השאר יימחק.</span></div>`;
+  if(main.length) html += `<ul class="items flat">${main.map(x => itemHTML(x,'main')).join('')}</ul>`;
+  else if(active.length) html += `<p class="sec-note">כל מה שנשאר סומן "לא נמצא".</p>`;
+  else html += `<div class="card empty" style="margin-top:6px"><div class="big"><svg class="i"><use href="#i-check"/></svg></div>
+      <h3 style="color:var(--text);margin-bottom:6px">הכול נקנה</h3><p>המוצרים הקבועים מחכים למטה. כשצריך שוב — "החזרה לרשימה".</p></div>`;
+  if(missing.length) html += `<h4 class="sec-title miss-title"><svg class="i"><use href="#i-x"/></svg>לא נמצאו <span>${missing.length}</span></h4>
+      <ul class="items flat">${missing.map(x => itemHTML(x,'miss')).join('')}</ul>`;
+  if(done.length) html += `<h4 class="sec-title"><svg class="i"><use href="#i-pin"/></svg>קבועים שנקנו <span>${done.length}</span></h4>
+      <ul class="items flat">${done.map(x => itemHTML(x,'done')).join('')}</ul>`;
+  body.innerHTML = html;
 
-  const bought = items.length - miss.length;
-  document.getElementById('finish-hint').textContent = miss.length ? `${miss.length} לא נמצאו — יישארו ברשימה` : 'סמנו "לא נמצא" על מה שלא היה בסופר';
-  document.getElementById('finish-txt').textContent = `סיימתי קנייה · ${bought} נקנו`;
-  document.getElementById('finish').classList.add('show');
+  if(active.length){
+    const bought = active.length - missing.length;
+    document.getElementById('finish-hint').textContent = missing.length ? `${missing.length} לא נמצאו — יישארו ברשימה` : 'סמנו "לא נמצא" על מה שלא היה בסופר';
+    document.getElementById('finish-txt').textContent = `סיימתי קנייה · ${bought} נקנו`;
+    document.getElementById('finish').classList.add('show');
+  } else hideFinish();
 }
-function itemHTML(x){
+function itemHTML(x, mode){
   const u = userOf(x.by);
-  return `<li class="item ${x.miss?'miss':''}" data-id="${x.id}" style="animation:none">
-    <button class="name" data-act="toggle" tabindex="-1"><span>${esc(x.name)}</span><small>${x.miss ? 'יישאר ברשימה לפעם הבאה' : 'הוסיף/ה '+esc(u.name)}</small></button>
-    <button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי"><b>${x.qty}</b><small>יח׳</small></button>
-    <button class="miss-btn" data-act="toggle" aria-pressed="${!!x.miss}" aria-label="${x.miss?'ביטול: נמצא':'סימון שלא נמצא'}: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>
+  const sub = mode === 'done' ? 'נקנה · מוצר קבוע' : mode === 'miss' ? 'יישאר ברשימה לפעם הבאה' : 'הוסיף/ה ' + esc(u.name);
+  const qty = mode === 'done'
+    ? `<span class="qbadge zero" aria-label="כמות 0"><b>0</b><small>יח׳</small></span>`
+    : `<button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי"><b>${x.qty}</b><small>יח׳</small></button>`;
+  const action = mode === 'main'
+    ? `<button class="miss-btn" data-act="toggle" aria-label="סימון שלא נמצא: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נמצא</button>`
+    : mode === 'miss'
+    ? `<button class="back-btn" data-act="toggle" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>נמצא</button>`
+    : `<button class="back-btn" data-act="back" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>החזרה לרשימה</button>`;
+  return `<li class="item ${mode !== 'main' ? mode : ''}" data-id="${x.id}" style="animation:none">
+    <div class="name"><span>${esc(x.name)}${x.fixed && mode !== 'done' ? ' <em class="fixed-tag">קבוע</em>' : ''}</span><small>${sub}</small></div>
+    ${qty}
+    ${action}
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
 }
@@ -768,6 +819,10 @@ document.getElementById('list-body').addEventListener('click', e => {
     x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
     sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
   }
+  if(b.dataset.act === 'back'){
+    x.done = false; x.miss = false; renderList(); toast(`"${x.name}" חזר לרשימה`);
+    sync(api(`/api/items/${x.id}/back`, {}));
+  }
   if(b.dataset.act === 'del'){
     LIST.items = LIST.items.filter(i => i !== x); renderList();
     const lid = LIST.id;
@@ -779,9 +834,10 @@ document.getElementById('list-body').addEventListener('click', e => {
 /* סיום קנייה: כל מה שלא סומן נחשב נקנה ונמחק; מה שסומן נשאר והסימון מתאפס */
 document.getElementById('btn-finish').onclick = () => {
   if(!LIST) return;
-  const missing = LIST.items.filter(x=>x.miss), bought = LIST.items.length - missing.length;
+  const active = LIST.items.filter(x => !x.done), missing = active.filter(x=>x.miss);
+  const boughtList = active.filter(x => !x.miss), fixedN = boughtList.filter(x => x.fixed).length, bought = boughtList.length - fixedN;
   openSheet(`<h3 id="sheet-title">לסיים את הקנייה?</h3>
-    <p>${bought === 1 ? 'מוצר אחד נקנה וימחק' : bought + ' מוצרים נקנו וימחקו'} מהרשימה.${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ' לא סימנתם אף מוצר כ"לא נמצא", אז הרשימה תתרוקן.'}</p>
+    <p>${bought ? (bought === 1 ? 'מוצר אחד נקנה וימחק מהרשימה.' : bought + ' מוצרים נקנו וימחקו מהרשימה.') : ''}${fixedN ? ` ${fixedN === 1 ? 'מוצר קבוע אחד יישאר' : fixedN + ' מוצרים קבועים יישארו'} למטה עם קו וכמות 0.` : ''}${missing.length ? ` ${missing.length === 1 ? 'המוצר שסימנתם "לא נמצא" יישאר' : missing.length + ' מוצרים שסימנתם "לא נמצא" יישארו'} לפעם הבאה: ${missing.map(x=>esc(x.name)).join(', ')}.` : ''}</p>
     <div class="stack">
       <button type="button" class="btn btn-primary btn-block" id="f-ok"><svg class="i"><use href="#i-check"/></svg>כן, סיימתי</button>
       <button type="button" class="btn btn-block" id="f-cancel">עוד לא, חזרה לרשימה</button>
@@ -793,8 +849,11 @@ document.getElementById('btn-finish').onclick = () => {
 /* סיום קנייה: כל מה שלא סומן נחשב נקנה ונמחק; מה שסומן נשאר והסימון מתאפס */
 function finishShopping(){
   const before = LIST.items.map(x => ({...x})), lid = LIST.id;
-  const bought = LIST.items.filter(x=>!x.miss).length, left = LIST.items.filter(x=>x.miss);
-  left.forEach(x => x.miss = false); LIST.items = left; renderList();
+  const bought = LIST.items.filter(x => !x.miss && !x.done).length, left = LIST.items.filter(x => x.miss && !x.done);
+  // רגילים שנקנו נמחקים, קבועים שנקנו נשארים עם קו, מה שלא נמצא חוזר לרשימה
+  LIST.items = LIST.items.filter(x => x.miss || x.fixed || x.done);
+  LIST.items.forEach(x => { if(!x.miss && x.fixed) x.done = true; x.miss = false; });
+  renderList();
   sync(api(`/api/lists/${lid}/finish`, {}));
   toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',
     () => sync(api(`/api/lists/${lid}/restore`, {replace: before})));
@@ -803,7 +862,7 @@ function finishShopping(){
 /* ===== שינוי כמות למוצר ===== */
 function openQty(x){
   const MAX = 50, ROW = 44;
-  let q = x.qty;
+  let q = x.qty, fixed = !!x.fixed;
   openSheet(`<h3 id="sheet-title">${esc(x.name)}</h3><p>גללו ובחרו כמה יחידות צריך.</p>
     <div class="wheel">
       <div class="wheel-band"></div>
@@ -812,7 +871,13 @@ function openQty(x){
       </ul>
       <span class="wheel-unit">יח׳</span>
     </div>
+    <button type="button" class="switch-row" id="q-fixed" role="switch" aria-checked="${fixed}">
+      <span><b>מוצר קבוע</b><small>לא נמחק אחרי קנייה — נשאר עם קו וכמות 0 עד שמחזירים אותו</small></span>
+      <i class="switch"></i>
+    </button>
     <div class="stack"><button type="button" class="btn btn-primary btn-block" id="q-ok">שמירה</button></div>`, () => {
+    const fx = document.getElementById('q-fixed');
+    fx.onclick = () => { fixed = !fixed; fx.setAttribute('aria-checked', fixed); };
     const wheel = document.getElementById('q-wheel'), lis = [...wheel.children];
     const mark = () => lis.forEach((li,i) => { const on = i+1 === q; li.classList.toggle('on', on); li.setAttribute('aria-selected', on); });
     // מתחילים על הכמות הנוכחית
@@ -831,9 +896,9 @@ function openQty(x){
     wheel.focus({preventScroll:true});
     document.getElementById('q-ok').onclick = () => {
       closeSheet();
-      if(q === x.qty || !LIST) return;
-      x.qty = q; renderList();
-      sync(api(`/api/items/${x.id}/qty`, {qty: q}));
+      if(!LIST) return;
+      if(fixed !== !!x.fixed){ x.fixed = fixed; renderList(); sync(api(`/api/items/${x.id}/fixed`, {fixed})); toast(fixed ? `"${x.name}" מוגדר כמוצר קבוע` : `"${x.name}" כבר לא קבוע`); }
+      if(q !== x.qty){ x.qty = q; renderList(); sync(api(`/api/items/${x.id}/qty`, {qty: q})); }
     };
   });
 }

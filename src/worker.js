@@ -74,6 +74,10 @@ export class GroceryDB extends DurableObject {
       CREATE INDEX IF NOT EXISTS items_list ON items(list_id);
       CREATE INDEX IF NOT EXISTS members_user ON members(user_id);
     `);
+    // מוצרים קבועים: fixed = לא נמחק אחרי קנייה, done = נקנה (מוצג עם קו וכמות 0)
+    const icols = this.q('PRAGMA table_info(items)').map(c => c.name);
+    if (!icols.includes('fixed')) this.sql.exec('ALTER TABLE items ADD COLUMN fixed INTEGER NOT NULL DEFAULT 0');
+    if (!icols.includes('done')) this.sql.exec('ALTER TABLE items ADD COLUMN done INTEGER NOT NULL DEFAULT 0');
     if (!this.q('PRAGMA table_info(users)').some(c => c.name === 'email')) this.sql.exec('ALTER TABLE users ADD COLUMN email TEXT');
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email)');
   }
@@ -121,7 +125,7 @@ export class GroceryDB extends DurableObject {
   }
   touch(lid) { this.sql.exec('UPDATE lists SET updated = ? WHERE id = ?', Date.now(), lid); }
   members(lid) { return this.q('SELECT u.* FROM members m JOIN users u ON u.id = m.user_id WHERE m.list_id = ? ORDER BY m.created', lid).map(u => this.pubUser(u)); }
-  items(lid) { return this.q('SELECT id, name, qty, cat, by_user AS "by", miss, created FROM items WHERE list_id = ? ORDER BY created DESC', lid).map(x => ({ ...x, miss: !!x.miss })); }
+  items(lid) { return this.q('SELECT id, name, qty, cat, by_user AS "by", miss, fixed, done, created FROM items WHERE list_id = ? ORDER BY created DESC', lid).map(x => ({ ...x, miss: !!x.miss, fixed: !!x.fixed, done: !!x.done })); }
   listFull(l) {
     return { id: l.id, name: l.name, code: l.code, updated: l.updated, members: this.members(l.id), items: this.items(l.id),
       history: this.q('SELECT name, cat FROM history WHERE list_id = ?', l.id) };
@@ -130,7 +134,7 @@ export class GroceryDB extends DurableObject {
     let lists = this.q('SELECT l.* FROM lists l JOIN members m ON m.list_id = l.id WHERE m.user_id = ? ORDER BY l.created', me.id);
     if (!lists.length) { this.createList(me.id, ''); lists = this.q('SELECT l.* FROM lists l JOIN members m ON m.list_id = l.id WHERE m.user_id = ?', me.id); }
     return { me: this.meUser(me), lists: lists.map(l => ({ id: l.id, name: l.name, updated: l.updated, members: this.members(l.id),
-      count: this.one('SELECT COUNT(*) AS c FROM items WHERE list_id = ?', l.id).c,
+      count: this.one('SELECT COUNT(*) AS c FROM items WHERE list_id = ? AND done = 0', l.id).c,
       preview: this.q('SELECT name, qty FROM items WHERE list_id = ? ORDER BY created DESC LIMIT 4', l.id) })) };
   }
   deleteList(lid) {
@@ -143,10 +147,14 @@ export class GroceryDB extends DurableObject {
       const name = norm(x.name, 40); if (!name) return;
       const qty = Math.max(1, Math.min(99, parseInt(x.qty) || 1));
       const cat = /^[a-z]{2,10}$/.test(x.cat || '') ? x.cat : 'other';
-      const ex = this.one('SELECT id, qty FROM items WHERE list_id = ? AND name = ?', lid, name);
-      if (ex && !x.id) this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
-      else if (!ex) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, x.by ? +x.by : uid, x.miss ? 1 : 0, x.created ? +x.created : now + i);
+      const ex = this.one('SELECT id, qty, done FROM items WHERE list_id = ? AND name = ?', lid, name);
+      if (ex && !x.id) {
+        // מוצר קבוע שכבר נקנה חוזר לרשימה; מוצר שכבר ברשימה מקבל עוד כמות
+        if (ex.done) this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = ? WHERE id = ?', qty, ex.id);
+        else this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
+      }
+      else if (!ex) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, x.by ? +x.by : uid, x.miss ? 1 : 0, x.fixed ? 1 : 0, x.done ? 1 : 0, x.created ? +x.created : now + i);
     });
     this.touch(lid);
   }
@@ -256,20 +264,24 @@ export class GroceryDB extends DurableObject {
       }
       if (act === 'finish' && method === 'POST') {
         const now = Date.now();
-        for (const x of this.q('SELECT name, cat FROM items WHERE list_id = ? AND miss = 0', lid))
+        for (const x of this.q('SELECT name, cat FROM items WHERE list_id = ? AND miss = 0 AND done = 0', lid))
           this.sql.exec('INSERT INTO history (list_id, name, cat, count, last) VALUES (?, ?, ?, 1, ?) ON CONFLICT(list_id, name) DO UPDATE SET count = count + 1, cat = excluded.cat, last = excluded.last', lid, x.name, x.cat, now);
-        this.sql.exec('DELETE FROM items WHERE list_id = ? AND miss = 0', lid);
+        // רגילים שנקנו נמחקים; קבועים שנקנו נשארים עם קו; מה שלא נמצא חוזר לרשימה
+        this.sql.exec('DELETE FROM items WHERE list_id = ? AND miss = 0 AND fixed = 0 AND done = 0', lid);
+        this.sql.exec('UPDATE items SET done = 1 WHERE list_id = ? AND miss = 0 AND fixed = 1', lid);
         this.sql.exec('UPDATE items SET miss = 0 WHERE list_id = ?', lid);
         this.touch(lid);
         return json(this.listFull(l));
       }
     }
-    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete|qty)$/)) && method === 'POST') {
+    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete|qty|fixed|back)$/)) && method === 'POST') {
       const it = this.one('SELECT * FROM items WHERE id = ?', m[1]);
       if (!it) throw new HttpError(404, 'המוצר כבר לא ברשימה');
       const l = this.needMember(it.list_id, me.id);
       if (m[2] === 'miss') this.sql.exec('UPDATE items SET miss = ? WHERE id = ?', body.miss ? 1 : 0, it.id);
       else if (m[2] === 'qty') this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.max(1, Math.min(99, parseInt(body.qty) || 1)), it.id);
+      else if (m[2] === 'fixed') this.sql.exec('UPDATE items SET fixed = ? WHERE id = ?', body.fixed ? 1 : 0, it.id);
+      else if (m[2] === 'back') this.sql.exec('UPDATE items SET done = 0, miss = 0 WHERE id = ?', it.id);
       else this.sql.exec('DELETE FROM items WHERE id = ?', it.id);
       this.touch(l.id);
       return json(this.listFull(this.one('SELECT * FROM lists WHERE id = ?', l.id)));
