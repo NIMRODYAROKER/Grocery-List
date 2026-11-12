@@ -86,6 +86,8 @@ export class GroceryDB extends DurableObject {
     const icols = this.q('PRAGMA table_info(items)').map(c => c.name);
     if (!icols.includes('fixed')) this.sql.exec('ALTER TABLE items ADD COLUMN fixed INTEGER NOT NULL DEFAULT 0');
     if (!icols.includes('done')) this.sql.exec('ALTER TABLE items ADD COLUMN done INTEGER NOT NULL DEFAULT 0');
+    // המנגנון התהפך: מסמנים מה שנקנה, לא מה שלא נקנה. סימוני "לא נקנה" ישנים מתאפסים
+    this.sql.exec('UPDATE items SET miss = 0 WHERE miss = 1');
     if (!this.q('PRAGMA table_info(users)').some(c => c.name === 'email')) this.sql.exec('ALTER TABLE users ADD COLUMN email TEXT');
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email)');
   }
@@ -281,13 +283,14 @@ export class GroceryDB extends DurableObject {
         return json(this.listFull(l));
       }
     }
-    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete|qty|fixed|back)$/)) && method === 'POST') {
+    if ((m = path.match(/^\/api\/items\/([\w-]+)\/(miss|delete|qty|fixed|back|buy)$/)) && method === 'POST') {
       const it = this.one('SELECT * FROM items WHERE id = ?', m[1]);
       if (!it) throw new HttpError(404, 'המוצר כבר לא ברשימה');
       const l = this.needMember(it.list_id, me.id);
       if (m[2] === 'miss') this.sql.exec('UPDATE items SET miss = ? WHERE id = ?', body.miss ? 1 : 0, it.id);
       else if (m[2] === 'qty') this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.max(1, Math.min(99, parseInt(body.qty) || 1)), it.id);
       else if (m[2] === 'fixed') this.sql.exec('UPDATE items SET fixed = ? WHERE id = ?', body.fixed ? 1 : 0, it.id);
+      else if (m[2] === 'buy') this.sql.exec('UPDATE items SET done = 1, miss = 0 WHERE id = ?', it.id);
       else if (m[2] === 'back') this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = 1 WHERE id = ?', it.id);
       else this.sql.exec('DELETE FROM items WHERE id = ?', it.id);
       this.touch(l.id);

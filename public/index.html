@@ -298,6 +298,10 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .switch::after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
 .switch-row[aria-checked="true"] .switch{background:var(--accent)}
 .switch-row[aria-checked="true"] .switch::after{transform:translateX(-20px)}
+.buy-btn{display:inline-flex;align-items:center;gap:5px;flex:none;height:32px;padding:0 13px;border-radius:999px;border:1.5px solid #3f8a5c;background:rgba(255,255,255,.45);color:#2f7a4c;font-family:var(--font-head);font-weight:600;font-size:.88rem;transition:all .2s var(--ease)}
+.buy-btn svg{width:14px;height:14px;stroke-width:3}
+.buy-btn:hover{background:#3f8a5c;color:#fff}
+.buy-btn:active{transform:scale(.95)}
 /* הסבר קצר מעל הרשימה */
 .howto{display:flex;gap:10px;align-items:flex-start;background:var(--miss-soft);border:1.5px solid rgba(210,88,62,.3);border-radius:12px;padding:10px 12px;margin:4px 0 6px;font-size:.92rem;line-height:1.45}
 .howto .ic{width:26px;height:26px;border-radius:50%;background:var(--miss);color:#fff;display:grid;place-items:center;flex:none;margin-top:1px}
@@ -338,6 +342,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 /* הודעה קופצת */
 .toast{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translate(-50%,-170%);z-index:60;background:var(--ink);color:var(--paper);border-radius:14px;padding:11px 14px 11px 18px;display:flex;align-items:center;gap:14px;font-weight:700;box-shadow:0 12px 24px -10px rgba(0,0,0,.6);transition:transform .4s var(--ease);max-width:calc(100% - 32px)}
 .toast.show{transform:translate(-50%,0)}
+#toast-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast button{color:#ffb19f;font-family:var(--font-head);font-weight:800;padding:4px 8px;border-radius:8px}
 
 @media (max-width:440px){.row2{grid-template-columns:1fr}}
@@ -785,67 +790,54 @@ function renderList(){
   const g = LIST; if(!g) return;
   const ln = document.getElementById('list-name');
   if(document.activeElement !== ln) ln.value = g.name || '';
-  const active = g.items.filter(x => !x.done);                 // מה שצריך לקנות
-  const main = active.filter(x => !x.miss).sort((a,b) => catRank(a) - catRank(b));
-  const missing = active.filter(x => x.miss);                   // סומנו "לא נמצא"
-  const done = g.items.filter(x => x.done);                     // קבועים שכבר נקנו
+  const active = g.items.filter(x => !x.done).sort((a,b) => catRank(a) - catRank(b));   // מה שצריך לקנות, לפי סדר הסופר
+  const done = g.items.filter(x => x.done);                                              // סומנו "נקנה"
   const others = g.members.filter(m => m.id !== meId()).map(m => m.name);
   document.getElementById('l-sub').textContent = (others.length ? `משותפת עם ${others.slice(0,3).join(', ')}${others.length>3?' ועוד':''}` : 'רק שלך · לחץ על האנשים כדי לשתף')
     + (active.length ? ` · ${active.length} מוצרים` : '');
+  hideFinish();
 
   const body = document.getElementById('list-body');
   if(!g.items.length){
     body.innerHTML = `<div class="card empty"><div class="big"><svg class="i"><use href="#i-cart"/></svg></div>
       <h3 style="color:var(--text);margin-bottom:6px">הרשימה ריקה</h3><p>כתוב למעלה מה צריך — המוצרים יסתדרו לבד לפי סדר הסופר.</p></div>`;
-    hideFinish(); return;
+    return;
   }
   let html = '';
-  if(main.length) html += `<ul class="items flat">${main.map(x => itemHTML(x,'main')).join('')}</ul>`;
-  else if(active.length) html += `<p class="sec-note">כל מה שנשאר סומן "לא נקנה".</p>`;
+  if(active.length) html += `<ul class="items flat">${active.map(x => itemHTML(x,'main')).join('')}</ul>`;
   else html += `<div class="card empty" style="margin-top:6px"><div class="big"><svg class="i"><use href="#i-check"/></svg></div>
-      <h3 style="color:var(--text);margin-bottom:6px">הכול נקנה</h3><p>המוצרים מחכים למטה ב"נקנו". כשצריך שוב — "החזרה לרשימה".</p></div>`;
-  if(missing.length) html += `<h4 class="sec-title miss-title"><svg class="i"><use href="#i-x"/></svg>לא נקנו <span>${missing.length}</span></h4>
-      <ul class="items flat">${missing.map(x => itemHTML(x,'miss')).join('')}</ul>`;
+      <h3 style="color:var(--text);margin-bottom:6px">הכול נקנה</h3><p>המוצרים מחכים למטה ב"נקנו". כשצריך שוב — "החזרה לרשימה" או לכתוב אותם שוב.</p></div>`;
   if(done.length) html += `<h4 class="sec-title"><svg class="i"><use href="#i-check"/></svg>נקנו <span>${done.length}</span></h4>
       <ul class="items flat">${done.map(x => itemHTML(x,'done')).join('')}</ul>`;
   body.innerHTML = html;
-
-  if(active.length){
-    const bought = active.length - missing.length;
-    document.getElementById('finish-hint').textContent = missing.length ? `${missing.length} לא נקנו — יישארו ברשימה` : 'סמנו "לא נקנה" על מה שלא קניתם';
-    document.getElementById('finish-txt').textContent = `סיימתי קנייה · ${bought} נקנו`;
-    document.getElementById('finish').classList.add('show');
-  } else hideFinish();
 }
 function itemHTML(x, mode){
-  const u = userOf(x.by);
   const qty = mode === 'done'
     ? `<span class="qbadge zero" aria-label="כמות 0">×0</span>`
     : `<button class="qbadge ${x.qty > 1 ? 'more' : ''}" data-act="qty" aria-label="כמות: ${x.qty}. לחצו לשינוי">×${x.qty}</button>`;
-  const once = mode === 'done' ? `<small>נקנה</small>` : '';
   const action = mode === 'main'
-    ? `<button class="miss-btn" data-act="toggle" aria-label="סימון שלא נקנה: ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg>לא נקנה</button>`
-    : mode === 'miss'
-    ? `<button class="back-btn" data-act="toggle" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>החזרה</button>`
+    ? `<button class="buy-btn" data-act="buy" aria-label="סימון שנקנה: ${esc(x.name)}"><svg class="i"><use href="#i-check"/></svg>נקנה</button>`
     : `<button class="back-btn" data-act="back" aria-label="החזרה לרשימה: ${esc(x.name)}"><svg class="i"><use href="#i-undo"/></svg>החזרה לרשימה</button>`;
-  return `<li class="item ${mode !== 'main' ? mode : ''}" data-id="${x.id}" style="animation:none">
+  return `<li class="item ${mode === 'done' ? 'done' : ''}" data-id="${x.id}" style="animation:none">
     ${qty}
-    <div class="name"><span>${esc(x.name)}</span>${once ? `<span class="meta">${once}</span>` : ''}</div>
+    <div class="name"><span>${esc(x.name)}</span></div>
     ${action}
     <button class="del" data-act="del" aria-label="מחיקת ${esc(x.name)}"><svg class="i"><use href="#i-x"/></svg></button>
   </li>`;
 }
 function hideFinish(){ document.getElementById('finish').classList.remove('show'); }
 
-/* פעולות על פריטים: לחיצה מסמנת "לא נקנה", איקס מוחק */
+/* פעולות על פריטים: "נקנה" מוריד למטה עם קו, "החזרה" מעלה בחזרה, איקס מוחק */
 document.getElementById('list-body').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b || !LIST) return;
   const li = b.closest('[data-id]'), x = LIST.items.find(i => i.id === li.dataset.id); if(!x) return;
   if(x.id.startsWith('tmp:')) return; // עוד לא נשמר בשרת
   if(b.dataset.act === 'qty') return openQty(x);
-  if(b.dataset.act === 'toggle'){
-    x.miss = !x.miss; if(navigator.vibrate) navigator.vibrate(12); renderList();
-    sync(api(`/api/items/${x.id}/miss`, {miss: x.miss}));
+  if(b.dataset.act === 'buy'){
+    x.done = true; x.miss = false; if(navigator.vibrate) navigator.vibrate(12); renderList();
+    const prevQty = x.qty;
+    sync(api(`/api/items/${x.id}/buy`, {}));
+    toast(`"${x.name}" נקנה`, () => { x.done = false; x.qty = prevQty; renderList(); sync(api(`/api/items/${x.id}/back`, {}).then(() => api(`/api/items/${x.id}/qty`, {qty: prevQty}))); });
   }
   if(b.dataset.act === 'back'){
     x.done = false; x.miss = false; x.qty = 1; renderList(); toast(`"${x.name}" חזר לרשימה`);
@@ -1073,7 +1065,7 @@ function toast(msg, undo){
 }
 
 /* ===== עדכון אוטומטי לגרסה החדשה ===== */
-const APP_VERSION = '2026.11.12-1425';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
+const APP_VERSION = '2026.11.12-2159';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
 async function checkUpdate(){
   try{
     const r = await fetch('version.txt?t=' + Date.now(), {cache:'no-store'});
