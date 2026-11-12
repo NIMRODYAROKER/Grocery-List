@@ -588,8 +588,6 @@ function matchKw(raw, words, kw){
 }
 function categorize(name){
   const key = plain(name.toLowerCase());
-  const h = LIST && LIST.history.find(x => x.name === name);
-  if(h) return h.cat;
   const raw = key.split(/\s+/), words = raw.map(stem);
   let best = 'other', bestScore = 0, bestLen = 0;
   for(const c of CAT_ORDER) for(const k of CATS[c].kw){
@@ -599,7 +597,12 @@ function categorize(name){
   return best;
 }
 /* מיון לפי סדר המחלקות בסופר (בלי להציג את שמות המחלקות) */
-const catRank = x => CAT_ORDER.indexOf(x.cat && x.cat !== 'other' ? x.cat : categorize(x.name));
+/* תמיד לפי מאגר המוצרים העדכני, גם למוצרים שנשמרו לפני עדכון המאגר */
+const CAT_CACHE = new Map();
+const catRank = x => {
+  if(!CAT_CACHE.has(x.name)) CAT_CACHE.set(x.name, CAT_ORDER.indexOf(categorize(x.name)));
+  return CAT_CACHE.get(x.name);
+};
 /* פירוק טקסט חופשי: "3 עגבניות", "חלב x2", "ביצים 2" */
 function parseEntry(raw){
   // רק מספר לפני המילה הוא כמות: "3 עגבניות". מספר אחרי המילה הוא חלק מהשם: "חלב 3%"
@@ -1070,7 +1073,7 @@ function toast(msg, undo){
 }
 
 /* ===== עדכון אוטומטי לגרסה החדשה ===== */
-const APP_VERSION = '2026.11.12-1423';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
+const APP_VERSION = '2026.11.12-1425';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
 async function checkUpdate(){
   try{
     const r = await fetch('version.txt?t=' + Date.now(), {cache:'no-store'});
