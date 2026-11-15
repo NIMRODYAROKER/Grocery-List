@@ -6,21 +6,52 @@ import { DurableObject } from 'cloudflare:workers';
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // אבטחה: רק חיבור מוצפן (https)
+    if (url.protocol === 'http:' && url.hostname !== 'localhost') {
+      url.protocol = 'https:';
+      return Response.redirect(url.toString(), 301);
+    }
     if (url.pathname.startsWith('/api/')) {
       const stub = env.DB.get(env.DB.idFromName('main'));
-      return stub.fetch(request);
+      return withSecurityHeaders(await stub.fetch(request));
     }
     // הדף עצמו וקובץ הגרסה לא נשמרים בזיכרון של הטלפון, כדי שעדכונים יגיעו לכולם
     const res = await env.ASSETS.fetch(request);
     const type = res.headers.get('content-type') || '';
+    const out = withSecurityHeaders(res);
     if (type.includes('text/html') || url.pathname.endsWith('version.txt')) {
-      const out = new Response(res.body, res);
       out.headers.set('cache-control', 'no-cache, no-store, must-revalidate');
-      return out;
     }
-    return res;
+    return out;
   }
 };
+
+// ---------- אבטחה ----------
+function withSecurityHeaders(res) {
+  const out = new Response(res.body, res);
+  out.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
+  out.headers.set('x-content-type-options', 'nosniff');
+  out.headers.set('x-frame-options', 'DENY');
+  out.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+  out.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+  return out;
+}
+const SESSION_DAYS = 60;
+const MIN_PASS = 6;
+const MAX_LISTS = 30, MAX_ITEMS = 300;
+// מגביל קצב פשוט בזיכרון: max פעולות בתוך windowMs
+class Limiter {
+  constructor() { this.hits = new Map(); }
+  count(key, windowMs) {
+    const now = Date.now(), arr = (this.hits.get(key) || []).filter(t => t > now - windowMs);
+    this.hits.set(key, arr); return arr;
+  }
+  over(key, max, windowMs) { return this.count(key, windowMs).length >= max; }
+  add(key, windowMs) { const arr = this.count(key, windowMs); arr.push(Date.now()); }
+  clear(key) { this.hits.delete(key); }
+  sweep() { if (this.hits.size > 5000) this.hits.clear(); }
+}
+const isJpeg = (b64) => b64.startsWith('/9j/');
 
 const COLORS = ['#8fb3d9', '#f0a48c', '#9cc59a', '#c2a7dd', '#f2c66d', '#7fc3b8', '#e99ab0'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -54,6 +85,7 @@ export class GroceryDB extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this.limiter = new Limiter();
     this.migrate();
   }
   q(query, ...binds) { return this.sql.exec(query, ...binds).toArray(); }
@@ -90,6 +122,15 @@ export class GroceryDB extends DurableObject {
     this.sql.exec('UPDATE items SET miss = 0 WHERE miss = 1');
     if (!this.q('PRAGMA table_info(users)').some(c => c.name === 'email')) this.sql.exec('ALTER TABLE users ADD COLUMN email TEXT');
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email)');
+    // יומן אבטחה: ניסיונות כניסה כושלים ונעילות
+    this.sql.exec('CREATE TABLE IF NOT EXISTS security_log (t INTEGER NOT NULL, kind TEXT NOT NULL, who TEXT, ip TEXT)');
+    // חיבורים ישנים פגים
+    this.sql.exec('DELETE FROM sessions WHERE created < ?', Date.now() - SESSION_DAYS * 864e5);
+  }
+  secLog(kind, who, ip) {
+    this.sql.exec('INSERT INTO security_log (t, kind, who, ip) VALUES (?, ?, ?, ?)', Date.now(), kind, who || '', ip || '');
+    this.sql.exec('DELETE FROM security_log WHERE t < ?', Date.now() - 30 * 864e5);
+    console.warn('[security]', kind, who || '', ip || '');
   }
 
   async fetch(request) {
@@ -106,7 +147,7 @@ export class GroceryDB extends DurableObject {
   auth(request) {
     const h = request.headers.get('authorization') || '';
     const token = h.startsWith('Bearer ') ? h.slice(7) : '';
-    const row = token && this.one('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?', token);
+    const row = token && this.one('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.created > ?', token, Date.now() - SESSION_DAYS * 864e5);
     if (!row) throw new HttpError(401, 'צריך להתחבר');
     return row;
   }
@@ -153,7 +194,9 @@ export class GroceryDB extends DurableObject {
   }
   addItems(lid, uid, arr) {
     const now = Date.now();
+    const memberIds = new Set(this.q('SELECT user_id FROM members WHERE list_id = ?', lid).map(r => r.user_id));
     (Array.isArray(arr) ? arr : []).slice(0, 60).forEach((x, i) => {
+      if (!x || typeof x !== 'object') return;
       const name = norm(x.name, 40); if (!name) return;
       const qty = Math.max(1, Math.min(99, parseInt(x.qty) || 1));
       const cat = /^[a-z]{2,10}$/.test(x.cat || '') ? x.cat : 'other';
@@ -163,8 +206,8 @@ export class GroceryDB extends DurableObject {
         if (ex.done) this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = ? WHERE id = ?', qty, ex.id);
         else this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
       }
-      else if (!ex) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, x.by ? +x.by : uid, x.miss ? 1 : 0, (x.fixed === false || x.fixed === 0) ? 0 : 1, x.done ? 1 : 0, x.created ? +x.created : now + i);
+      else if (!ex && this.one('SELECT COUNT(*) AS c FROM items WHERE list_id = ?', lid).c < MAX_ITEMS) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, (x.by && memberIds.has(+x.by)) ? +x.by : uid, x.miss ? 1 : 0, (x.fixed === false || x.fixed === 0) ? 0 : 1, x.done ? 1 : 0, x.created ? +x.created : now + i);
     });
     this.touch(lid);
   }
@@ -176,29 +219,43 @@ export class GroceryDB extends DurableObject {
     let body = {};
     if (method === 'POST') { try { body = await request.json(); } catch (e) { body = {}; } }
     let m;
+    const ip = request.headers.get('cf-connecting-ip') || 'local';
+    const L = this.limiter; L.sweep();
+    if (L.over('req:' + ip, 240, 60e3)) throw new HttpError(429, 'יותר מדי בקשות. חכה דקה ונסה שוב');
+    L.add('req:' + ip, 60e3);
 
     // ----- חשבונות -----
     if (path === '/api/signup' && method === 'POST') {
+      if (L.over('signup:' + ip, 5, 3600e3)) { this.secLog('signup-limit', '', ip); throw new HttpError(429, 'נפתחו יותר מדי משתמשים מהמכשיר הזה. נסה שוב בעוד שעה'); }
       const username = norm(body.username, 18), password = String(body.password || '');
       const email = String(body.email || '').trim().toLowerCase();
       if (username.length < 2) bad('שם משתמש צריך לפחות 2 תווים');
       if (username.includes('@')) bad('שם המשתמש לא יכול לכלול @');
       if (!EMAIL_RE.test(email) || email.length > 120) bad('כתובת המייל לא נראית תקינה');
       if (this.one('SELECT id FROM users WHERE email = ?', email)) bad('כבר יש משתמש עם המייל הזה. נסה להתחבר');
-      if (password.length < 4) bad('הסיסמה צריכה להיות לפחות 4 תווים');
+      if (password.length < MIN_PASS) bad(`הסיסמה צריכה להיות לפחות ${MIN_PASS} תווים`);
       if (this.one('SELECT id FROM users WHERE username = ?', username)) bad('השם הזה כבר תפוס. נסה שם אחר או התחבר');
       const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
       const color = COLORS[this.one('SELECT COUNT(*) AS c FROM users').c % COLORS.length];
       this.sql.exec('INSERT INTO users (username, pass_hash, salt, color, created, email) VALUES (?, ?, ?, ?, ?, ?)', username, await hashPassword(password, salt), salt, color, Date.now(), email);
       const u = this.one('SELECT * FROM users WHERE username = ?', username);
       this.createList(u.id, '');
+      L.add('signup:' + ip, 3600e3);
       return json({ token: this.newSession(u.id) });
     }
     if (path === '/api/login' && method === 'POST') {
       // כניסה עם שם משתמש או מייל
       const id = norm(body.username, 120);
+      const acc = 'fail:' + id.toLowerCase(), ipk = 'failip:' + ip, WIN = 15 * 60e3;
+      // נעילה זמנית אחרי הרבה ניסיונות כושלים
+      if (L.over(acc, 5, WIN) || L.over(ipk, 20, WIN)) throw new HttpError(429, 'יותר מדי ניסיונות כניסה. חכה 15 דקות ונסה שוב');
       const u = id.includes('@') ? this.one('SELECT * FROM users WHERE email = ?', id.toLowerCase()) : this.one('SELECT * FROM users WHERE username = ?', id);
-      if (!u || !safeEqual(await hashPassword(String(body.password || ''), u.salt), u.pass_hash)) bad('הפרטים לא נכונים. בדוק את השם או המייל והסיסמה');
+      if (!u || !safeEqual(await hashPassword(String(body.password || ''), u.salt), u.pass_hash)) {
+        L.add(acc, WIN); L.add(ipk, WIN);
+        this.secLog(L.over(acc, 5, WIN) ? 'login-locked' : 'login-failed', id, ip);
+        bad('הפרטים לא נכונים. בדוק את השם או המייל והסיסמה');
+      }
+      L.clear(acc);
       return json({ token: this.newSession(u.id) });
     }
     if ((m = path.match(/^\/api\/u\/(\d+)\/photo$/)) && method === 'GET') {
@@ -232,20 +289,30 @@ export class GroceryDB extends DurableObject {
       else if (typeof body.photo === 'string' && body.photo.startsWith('data:image/jpeg;base64,')) {
         const b64 = body.photo.slice(23);
         if (b64.length > 200000) bad('התמונה גדולה מדי');
+        if (!/^[A-Za-z0-9+/=]+$/.test(b64) || !isJpeg(b64)) bad('אפשר להעלות רק תמונה');
         this.sql.exec('UPDATE users SET photo = ?, photo_v = photo_v + 1 WHERE id = ?', b64, me.id);
       }
       if (body.newPass) {
         if (!safeEqual(await hashPassword(String(body.oldPass || ''), me.salt), me.pass_hash)) bad('הסיסמה הנוכחית לא נכונה');
-        if (String(body.newPass).length < 4) bad('הסיסמה החדשה צריכה להיות לפחות 4 תווים');
+        if (String(body.newPass).length < MIN_PASS) bad(`הסיסמה החדשה צריכה להיות לפחות ${MIN_PASS} תווים`);
         const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
         this.sql.exec('UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?', await hashPassword(String(body.newPass), salt), salt, me.id);
+        // מנתקים את כל שאר המכשירים שהיו מחוברים עם הסיסמה הישנה
+        this.sql.exec('DELETE FROM sessions WHERE user_id = ? AND token != ?', me.id, (request.headers.get('authorization') || '').slice(7));
       }
       return json(this.home(this.one('SELECT * FROM users WHERE id = ?', me.id)));
     }
 
     // ----- רשימות -----
-    if (path === '/api/lists' && method === 'POST') return json({ id: this.createList(me.id, body.name) });
+    const myListCount = () => this.one('SELECT COUNT(*) AS c FROM members WHERE user_id = ?', me.id).c;
+    if (path === '/api/lists' && method === 'POST') {
+      if (myListCount() >= MAX_LISTS) bad(`אפשר עד ${MAX_LISTS} רשימות`);
+      return json({ id: this.createList(me.id, body.name) });
+    }
     if (path === '/api/lists/join' && method === 'POST') {
+      if (L.over('join:' + me.id, 10, 15 * 60e3)) throw new HttpError(429, 'יותר מדי ניסיונות. חכה כמה דקות');
+      L.add('join:' + me.id, 15 * 60e3);
+      if (myListCount() >= MAX_LISTS) bad(`אפשר עד ${MAX_LISTS} רשימות`);
       const l = this.one('SELECT * FROM lists WHERE code = ?', String(body.code || '').trim().toUpperCase());
       if (!l) bad('לא מצאנו רשימה עם הקוד הזה. בדוק שוב את התווים');
       if (this.one('SELECT 1 AS x FROM members WHERE list_id = ? AND user_id = ?', l.id, me.id)) bad('הרשימה הזאת כבר אצלך');

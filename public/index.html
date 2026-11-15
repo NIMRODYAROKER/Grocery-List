@@ -440,7 +440,7 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
         </div>
         <div>
           <label class="lbl" for="user-pass">סיסמה</label>
-          <input class="field" id="user-pass" type="password" maxlength="40" autocomplete="current-password" placeholder="לפחות 4 תווים" required>
+          <input class="field" id="user-pass" type="password" maxlength="40" autocomplete="current-password" placeholder="הסיסמה שלך" required>
         </div>
         <p class="err" id="user-err" role="alert"></p>
         <button class="btn btn-primary btn-block" type="button" data-submit><span id="auth-btn-txt">כניסה</span><svg class="i"><use href="#i-back"/></svg></button>
@@ -663,6 +663,7 @@ document.querySelectorAll('#auth-seg [data-mode]').forEach(b => b.onclick = () =
   document.getElementById('email-row').hidden = !signup;
   document.getElementById('user-name-lbl').textContent = signup ? 'שם משתמש' : 'שם משתמש או מייל';
   nm.placeholder = signup ? 'למשל: רועי' : 'רועי או roy@gmail.com'; nm.maxLength = signup ? 18 : 120;
+  document.getElementById('user-pass').placeholder = signup ? 'לפחות 6 תווים' : 'הסיסמה שלך';
   document.getElementById('user-err').textContent = '';
 });
 onSubmit('form-user', async () => {
@@ -671,7 +672,8 @@ onSubmit('form-user', async () => {
   const email = norm(document.getElementById('user-email').value);
   if(username.length < 2){ err.textContent = authMode === 'login' ? 'כתוב שם משתמש או מייל' : 'צריך שם משתמש (לפחות 2 תווים)'; return; }
   if(authMode === 'signup' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent = 'כתובת המייל לא נראית תקינה'; return; }
-  if(password.length < 4){ err.textContent = 'הסיסמה צריכה להיות לפחות 4 תווים'; return; }
+  if(authMode === 'signup' && password.length < 6){ err.textContent = 'הסיסמה צריכה להיות לפחות 6 תווים'; return; }
+  if(!password){ err.textContent = 'כתוב סיסמה'; return; }
   btn.disabled = true; err.textContent = '';
   try{
     const r = await api(authMode === 'login' ? '/api/login' : '/api/signup', {username, password, email});
@@ -1078,7 +1080,7 @@ function openSettings(){
       <div class="divider"></div>
       <div><label class="lbl" for="s-old">שינוי סיסמה</label>
         <div class="stack" style="gap:8px"><input class="field" id="s-old" type="password" placeholder="סיסמה נוכחית" autocomplete="current-password">
-        <input class="field" id="s-new" type="password" placeholder="סיסמה חדשה (לפחות 4 תווים)" autocomplete="new-password"></div></div>
+        <input class="field" id="s-new" type="password" placeholder="סיסמה חדשה (לפחות 6 תווים)" autocomplete="new-password"></div></div>
       <p class="err" id="s-err" role="alert"></p>
       <button type="button" class="btn btn-primary btn-block" id="s-save">שמירה</button>
       <button type="button" class="btn btn-ghost btn-block" id="s-out"><svg class="i"><use href="#i-logout"/></svg>התנתקות</button>
@@ -1111,7 +1113,7 @@ function openSettings(){
       const body = {name: norm(document.getElementById('s-name').value), email: norm(document.getElementById('s-mail').value), color: draft.color};
       if(photoChanged) body.photo = draft.photo;
       const oldP = document.getElementById('s-old').value, newP = document.getElementById('s-new').value;
-      if(oldP || newP){ body.oldPass = oldP; body.newPass = newP; if(newP.length < 4){ err.textContent = 'הסיסמה החדשה צריכה להיות לפחות 4 תווים'; return; } }
+      if(oldP || newP){ body.oldPass = oldP; body.newPass = newP; if(newP.length < 6){ err.textContent = 'הסיסמה החדשה צריכה להיות לפחות 6 תווים'; return; } }
       try{ HOME = await api('/api/profile', body); closeSheet(); await route(); toast('הפרופיל עודכן'); }
       catch(e){ err.textContent = e.message; }
     };
@@ -1143,7 +1145,7 @@ function toast(msg, undo){
 }
 
 /* ===== עדכון אוטומטי לגרסה החדשה ===== */
-const APP_VERSION = '2026.11.12-2219';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
+const APP_VERSION = '2026.11.15-2000';   // מתעדכן בכל העלאה; קובץ version.txt באתר מחזיק את הגרסה האחרונה
 async function checkUpdate(){
   try{
     const r = await fetch('version.txt?t=' + Date.now(), {cache:'no-store'});
