@@ -118,6 +118,8 @@ export class GroceryDB extends DurableObject {
     const icols = this.q('PRAGMA table_info(items)').map(c => c.name);
     if (!icols.includes('fixed')) this.sql.exec('ALTER TABLE items ADD COLUMN fixed INTEGER NOT NULL DEFAULT 0');
     if (!icols.includes('done')) this.sql.exec('ALTER TABLE items ADD COLUMN done INTEGER NOT NULL DEFAULT 0');
+    // מתי המוצר נקנה, כדי להציג את "נקנו" מהאחרון שנקנה למעלה
+    if (!icols.includes('bought')) this.sql.exec('ALTER TABLE items ADD COLUMN bought INTEGER NOT NULL DEFAULT 0');
     // המנגנון התהפך: מסמנים מה שנקנה, לא מה שלא נקנה. סימוני "לא נקנה" ישנים מתאפסים
     this.sql.exec('UPDATE items SET miss = 0 WHERE miss = 1');
     if (!this.q('PRAGMA table_info(users)').some(c => c.name === 'email')) this.sql.exec('ALTER TABLE users ADD COLUMN email TEXT');
@@ -176,7 +178,7 @@ export class GroceryDB extends DurableObject {
   }
   touch(lid) { this.sql.exec('UPDATE lists SET updated = ? WHERE id = ?', Date.now(), lid); }
   members(lid) { return this.q('SELECT u.* FROM members m JOIN users u ON u.id = m.user_id WHERE m.list_id = ? ORDER BY m.created', lid).map(u => this.pubUser(u)); }
-  items(lid) { return this.q('SELECT id, name, qty, cat, by_user AS "by", miss, fixed, done, created FROM items WHERE list_id = ? ORDER BY created DESC', lid).map(x => ({ ...x, miss: !!x.miss, fixed: !!x.fixed, done: !!x.done })); }
+  items(lid) { return this.q('SELECT id, name, qty, cat, by_user AS "by", miss, fixed, done, bought, created FROM items WHERE list_id = ? ORDER BY created DESC', lid).map(x => ({ ...x, miss: !!x.miss, fixed: !!x.fixed, done: !!x.done })); }
   listFull(l) {
     return { id: l.id, name: l.name, code: l.code, updated: l.updated, members: this.members(l.id), items: this.items(l.id),
       history: this.q('SELECT name, cat FROM history WHERE list_id = ?', l.id) };
@@ -202,12 +204,11 @@ export class GroceryDB extends DurableObject {
       const cat = /^[a-z]{2,10}$/.test(x.cat || '') ? x.cat : 'other';
       const ex = this.one('SELECT id, qty, done FROM items WHERE list_id = ? AND name = ?', lid, name);
       if (ex && !x.id) {
-        // מוצר קבוע שכבר נקנה חוזר לרשימה; מוצר שכבר ברשימה מקבל עוד כמות
+        // מוצר שכבר נקנה חוזר לרשימה; מוצר שכבר ברשימה נשאר כמו שהוא (לא מוסיפים כמות)
         if (ex.done) this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = ? WHERE id = ?', qty, ex.id);
-        else this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.min(99, ex.qty + qty), ex.id);
       }
-      else if (!ex && this.one('SELECT COUNT(*) AS c FROM items WHERE list_id = ?', lid).c < MAX_ITEMS) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, (x.by && memberIds.has(+x.by)) ? +x.by : uid, x.miss ? 1 : 0, (x.fixed === false || x.fixed === 0) ? 0 : 1, x.done ? 1 : 0, x.created ? +x.created : now + i);
+      else if (!ex && this.one('SELECT COUNT(*) AS c FROM items WHERE list_id = ?', lid).c < MAX_ITEMS) this.sql.exec('INSERT INTO items (id, list_id, name, qty, cat, by_user, miss, fixed, done, bought, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (x.id && /^[\w-]{6,20}$/.test(x.id)) ? x.id : randomId(9), lid, name, qty, cat, (x.by && memberIds.has(+x.by)) ? +x.by : uid, x.miss ? 1 : 0, (x.fixed === false || x.fixed === 0) ? 0 : 1, x.done ? 1 : 0, (x.done && +x.bought > 0) ? Math.min(+x.bought, now) : 0, x.created ? +x.created : now + i);
     });
     this.touch(lid);
   }
@@ -344,7 +345,7 @@ export class GroceryDB extends DurableObject {
         for (const x of this.q('SELECT name, cat FROM items WHERE list_id = ? AND miss = 0 AND done = 0', lid))
           this.sql.exec('INSERT INTO history (list_id, name, cat, count, last) VALUES (?, ?, ?, 1, ?) ON CONFLICT(list_id, name) DO UPDATE SET count = count + 1, cat = excluded.cat, last = excluded.last', lid, x.name, x.cat, now);
         // כל מה שנקנה נשאר ברשימה עם קו (מחזירים בכפתור או כשכותבים אותו שוב); מה שלא נמצא נשאר לקנייה הבאה
-        this.sql.exec('UPDATE items SET done = 1 WHERE list_id = ? AND miss = 0', lid);
+        this.sql.exec('UPDATE items SET done = 1, bought = ? WHERE list_id = ? AND miss = 0 AND done = 0', now, lid);
         this.sql.exec('UPDATE items SET miss = 0 WHERE list_id = ?', lid);
         this.touch(lid);
         return json(this.listFull(l));
@@ -357,7 +358,7 @@ export class GroceryDB extends DurableObject {
       if (m[2] === 'miss') this.sql.exec('UPDATE items SET miss = ? WHERE id = ?', body.miss ? 1 : 0, it.id);
       else if (m[2] === 'qty') this.sql.exec('UPDATE items SET qty = ? WHERE id = ?', Math.max(1, Math.min(99, parseInt(body.qty) || 1)), it.id);
       else if (m[2] === 'fixed') this.sql.exec('UPDATE items SET fixed = ? WHERE id = ?', body.fixed ? 1 : 0, it.id);
-      else if (m[2] === 'buy') this.sql.exec('UPDATE items SET done = 1, miss = 0 WHERE id = ?', it.id);
+      else if (m[2] === 'buy') this.sql.exec('UPDATE items SET done = 1, miss = 0, bought = ? WHERE id = ?', Date.now(), it.id);
       else if (m[2] === 'back') this.sql.exec('UPDATE items SET done = 0, miss = 0, qty = 1 WHERE id = ?', it.id);
       else this.sql.exec('DELETE FROM items WHERE id = ?', it.id);
       this.touch(l.id);

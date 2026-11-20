@@ -238,6 +238,8 @@ label.lbl,span.lbl{display:block;font-weight:700;margin:0 0 7px;font-size:.95rem
 .items.flat{margin-top:10px;border-top:1.5px solid var(--line)}
 .item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1.5px solid var(--line);transition:background .25s,transform .25s var(--ease);animation:itemIn .35s var(--ease)}
 .item:hover{background:rgba(255,255,255,.4);transform:translateX(-3px)}
+.swipe.flash .item{animation:flash 1.8s var(--ease)}
+@keyframes flash{0%,60%{background:rgba(51,64,97,.16)}100%{background:transparent}}
 @keyframes itemIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 .check{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-strong);display:grid;place-items:center;flex:none;transition:all .25s var(--ease)}
 .check svg{width:15px;height:15px;stroke-width:3;opacity:0;transform:scale(.4);transition:all .25s var(--ease)}
@@ -775,17 +777,27 @@ async function addItems(raw){
   const items = parts.map(parseEntry).filter(x => x.name).map(x => ({...x, cat: categorize(x.name)}));
   if(!items.length) return;
   // מציגים מיד, ושומרים בשרת ברקע
-  const revived = [];
+  const revived = [], already = [];
   items.forEach(x => {
     const ex = LIST.items.find(y => y.name === x.name);
-    if(ex && ex.done) revived.push(x.name);
-    if(ex && ex.done){ ex.done = false; ex.miss = false; ex.qty = x.qty; }   // חוזר לרשימה עם כמות חדשה (1 אם לא נכתב מספר)
-    else if(ex) ex.qty = Math.min(99, ex.qty + x.qty);
+    if(ex && ex.done){ revived.push(x.name); ex.done = false; ex.miss = false; ex.qty = x.qty; }   // חוזר לרשימה עם כמות חדשה (1 אם לא נכתב מספר)
+    else if(ex) already.push(ex);   // כבר ברשימה: לא מוסיפים כמות, רק מראים איפה הוא
     else LIST.items.unshift({id: tmpId(), name: x.name, qty: x.qty, cat: x.cat, by: meId(), miss: false, fixed: true, done: false});
   });
   renderList();
-  toast(items.length > 1 ? `נוספו ${items.length} מוצרים` : `"${items[0].name}" ${revived.includes(items[0].name) ? 'חזר' : 'נוסף'} לרשימה`);
-  sync(api(`/api/lists/${LIST.id}/items`, {items}));
+  const added = items.length - already.length;
+  if(already.length && !added) toast(already.length > 1 ? `${already.length} המוצרים כבר ברשימה` : `"${already[0].name}" כבר ברשימה`);
+  else if(items.length > 1) toast(`נוספו ${added} מוצרים${already.length ? ` · ${already.length} כבר היו ברשימה` : ''}`);
+  else toast(`"${items[0].name}" ${revived.includes(items[0].name) ? 'חזר' : 'נוסף'} לרשימה`);
+  if(already.length) showExisting(already[0].id);
+  if(added) sync(api(`/api/lists/${LIST.id}/items`, {items: items.filter(x => !already.some(e => e.name === x.name))}));
+}
+/* גלילה למוצר שכבר קיים והדגשה קצרה שלו */
+function showExisting(id){
+  const li = document.querySelector(`#list-body [data-id="${CSS.escape(id)}"]`); if(!li) return;
+  li.scrollIntoView({behavior:'smooth', block:'center'});
+  li.classList.remove('flash'); void li.offsetWidth; li.classList.add('flash');
+  setTimeout(() => li.classList.remove('flash'), 1800);
 }
 /* מקבלים מהשרת את המצב העדכני ומציירים מחדש */
 async function sync(p){
@@ -808,7 +820,7 @@ function renderList(){
   const ln = document.getElementById('list-name');
   if(document.activeElement !== ln) ln.value = g.name || '';
   const active = g.items.filter(x => !x.done).sort((a,b) => catRank(a) - catRank(b));   // מה שצריך לקנות, לפי סדר הסופר
-  const done = g.items.filter(x => x.done);                                              // סומנו "נקנה"
+  const done = g.items.filter(x => x.done).sort((a,b) => (b.bought||0) - (a.bought||0) || (b.created||0) - (a.created||0));   // סומנו "נקנה", האחרון שנקנה למעלה
   const others = g.members.filter(m => m.id !== meId()).map(m => m.name);
   document.getElementById('l-sub').textContent = (others.length ? `משותפת עם ${others.slice(0,3).join(', ')}${others.length>3?' ועוד':''}` : 'רק שלך · לחץ על האנשים כדי לשתף')
     + (active.length ? ` · ${active.length} מוצרים` : '');
@@ -914,7 +926,7 @@ function doAct(act, id){
   const b = {dataset:{act}};
   if(b.dataset.act === 'qty') return openQty(x);
   if(b.dataset.act === 'buy'){
-    x.done = true; x.miss = false; if(navigator.vibrate) navigator.vibrate(12); renderList();
+    x.done = true; x.miss = false; x.bought = Date.now(); if(navigator.vibrate) navigator.vibrate(12); renderList();
     const prevQty = x.qty;
     sync(api(`/api/items/${x.id}/buy`, {}));
     toast(`"${x.name}" נקנה`, () => { x.done = false; x.qty = prevQty; renderList(); sync(api(`/api/items/${x.id}/back`, {}).then(() => api(`/api/items/${x.id}/qty`, {qty: prevQty}))); });
@@ -951,7 +963,8 @@ function finishShopping(){
   const before = LIST.items.map(x => ({...x})), lid = LIST.id;
   const bought = LIST.items.filter(x => !x.miss && !x.done).length, left = LIST.items.filter(x => x.miss && !x.done);
   // רגילים שנקנו נמחקים, קבועים שנקנו נשארים עם קו, מה שלא נמצא חוזר לרשימה
-  LIST.items.forEach(x => { if(!x.miss) x.done = true; x.miss = false; });
+  const t = Date.now();
+  LIST.items.forEach(x => { if(!x.miss && !x.done){ x.done = true; x.bought = t; } x.miss = false; });
   renderList();
   sync(api(`/api/lists/${lid}/finish`, {}));
   toast(left.length ? `${bought} נקנו · ${left.length} נשארו ברשימה` : 'כל הכבוד! הכול נקנה',
